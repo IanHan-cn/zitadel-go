@@ -1,9 +1,8 @@
-// Package oauth provides helpers used exclusively in unit tests.
+// Package oauth 提供了仅在单元测试中使用的辅助工具。
 //
-// This file defines TestKey, a thin wrapper around a generated RSA key
-// pair that exposes convenience methods for producing JWK‑compatible
-// values (modulus, exponent, thumb‑print) without leaking production
-// code into the final binaries.
+// 本文件定义了 TestKey，它是对所生成 RSA 密钥对的轻量封装，
+// 提供了若干便捷方法用于生成 JWK 兼容的值（模数、指数、指纹），
+// 同时不会将生产代码泄漏到最终二进制文件中。
 package oauth_test
 
 import (
@@ -15,26 +14,25 @@ import (
 	"math/big"
 )
 
-// b64 is the JOSE‑style base64url encoding (no padding).
+// b64 是 JOSE 风格的 base64url 编码（无填充）。
 var b64 = base64.RawURLEncoding
 
-// TestKey represents an in‑memory RSA key pair and exposes helper
-// methods that simplify JWT and JWKS related unit tests.
+// TestKey 表示一个内存中的 RSA 密钥对，并提供了一些
+// 用于简化 JWT 与 JWKS 相关单元测试的辅助方法。
 type TestKey struct {
 	priv *rsa.PrivateKey
 	kid  string
 }
 
-// NewTestKey generates a fresh RSA key pair of the requested size and
-// immediately computes its RFC 7638 thumb‑print, caching the result in
-// the TestKey instance.
+// NewTestKey 生成一副指定长度的新 RSA 密钥对，
+// 并立即计算其 RFC 7638 指纹，将结果缓存在 TestKey 实例中。
 func NewTestKey(bits int) (*TestKey, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, bits)
 	if err != nil {
 		return nil, fmt.Errorf("generate RSA key: %w", err)
 	}
 
-	// Compute RFC 7638 SHA‑256 thumb‑print for the new public key.
+	// 为新公钥计算 RFC 7638 SHA‑256 指纹。
 	eBytes := big.NewInt(int64(priv.PublicKey.E)).Bytes()
 	jwk := fmt.Sprintf(`{"e":"%s","kty":"RSA","n":"%s"}`,
 		b64.EncodeToString(eBytes),
@@ -47,26 +45,26 @@ func NewTestKey(bits int) (*TestKey, error) {
 	}, nil
 }
 
-// Private returns the *rsa.PrivateKey associated with the TestKey so the
-// caller can sign JSON Web Tokens directly.
+// Private 返回 TestKey 关联的 *rsa.PrivateKey，
+// 以便调用方直接签发 JSON Web Token。
 func (k *TestKey) Private() *rsa.PrivateKey { return k.priv }
 
-// Public returns the public portion of the RSA key. The value can be
-// embedded into a JWKS document for token verification.
+// Public 返回 RSA 密钥的公钥部分。该值可被嵌入
+// JWKS 文档中，用于令牌校验。
 func (k *TestKey) Public() *rsa.PublicKey { return &k.priv.PublicKey }
 
-// ExponentString encodes the public exponent using base64url without
-// padding, matching the representation required for the JWK "e" field.
+// ExponentString 使用无填充的 base64url 对公钥指数进行编码，
+// 符合 JWK "e" 字段所要求的表示形式。
 func (k *TestKey) ExponentString() string {
 	eBytes := big.NewInt(int64(k.Public().E)).Bytes()
 	return b64.EncodeToString(eBytes)
 }
 
-// ModulusString encodes the modulus using base64url without padding, as
-// expected for the JWK "n" field.
+// ModulusString 使用无填充的 base64url 对模数进行编码，
+// 这正是 JWK "n" 字段所期望的形式。
 func (k *TestKey) ModulusString() string {
 	return b64.EncodeToString(k.Public().N.Bytes())
 }
 
-// KID returns the pre‑computed RFC 7638 thumb‑print for this key.
+// KID 返回该密钥预先计算好的 RFC 7638 指纹。
 func (k *TestKey) KID() string { return k.kid }

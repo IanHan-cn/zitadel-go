@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	// flags to be provided for running the example server
+	// 运行示例服务器时需要提供的命令行参数
 	domain = flag.String("domain", "", "your ZITADEL instance domain (in the form: <instance>.zitadel.cloud or <yourdomain>)")
 	key    = flag.String("key", "", "path to your key.json")
 	port   = flag.String("port", "8089", "port to run the server on (default is 8089)")
@@ -30,30 +30,30 @@ func main() {
 
 	ctx := context.Background()
 
-	// Initiate the authorization by providing a zitadel configuration and a verifier.
-	// This example will use OAuth2 Introspection for this, therefore you will also need to provide the downloaded api key.json
+	// 通过提供 zitadel 配置和校验器来初始化授权能力。
+	// 本例将使用 OAuth2 Introspection，因此你还需要提供已下载的 api key.json
 	authZ, err := authorization.New(ctx, zitadel.New(*domain), oauth.DefaultAuthorization(*key))
 	if err != nil {
 		slog.Error("zitadel sdk could not initialize", "error", err)
 		os.Exit(1)
 	}
 
-	// Initialize the GRPC middleware by providing the sdk and the authorization checks
+	// 通过提供 sdk 和授权检查项来初始化 GRPC 中间件
 	mw := middleware.New(authZ, checks)
 
-	// Create the GRPC server and provide the necessary interceptors
+	// 创建 GRPC 服务器并配置所需的拦截器
 	serverOptions := []grpc.ServerOption{
 		grpc.UnaryInterceptor(mw.Unary()),
 		grpc.StreamInterceptor(mw.Stream()),
 	}
 	grpcServer := grpc.NewServer(serverOptions...)
 
-	// Register your server implementation
+	// 注册你自己的服务端实现
 	v3alpha.RegisterExampleServiceServer(grpcServer, NewServer(mw))
-	// for easier use, we also register the grpc server reflection
+	// 为方便使用，我们还注册了 grpc server reflection
 	reflection.Register(grpcServer)
 
-	// finally start the server on port 8099
+	// 最后在 8099 端口上启动服务器
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", *port))
 	if err != nil {
 		slog.Error("creating listener failed", "error", err)

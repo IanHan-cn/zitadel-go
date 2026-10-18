@@ -24,13 +24,13 @@ func main() {
 
 	ctx := context.Background()
 
-	//create a client for the management api providing:
-	//- issuer (e.g. https://acme-dtfhdg.zitadel.cloud)
-	//- api (e.g. acme-dtfhdg.zitadel.cloud:443)
-	//- scopes (including the ZITADEL project ID),
-	//- a JWT Profile token source (e.g. path to your key json), if not provided, the file will be read from the path set in env var ZITADEL_KEY_PATH
-	//- id of the organisation where your calls will be executed
-	//(default is the resource owner / organisation of the calling user, can also be provided for every call separately)
+	//为 management api 创建一个客户端，需要提供：
+	//- issuer（例如 https://acme-dtfhdg.zitadel.cloud）
+	//- api（例如 acme-dtfhdg.zitadel.cloud:443）
+	//- scopes（需包含 ZITADEL 的项目 ID），
+	//- 一个 JWT Profile 令牌来源（例如你的 key json 路径），若未提供，则会从环境变量 ZITADEL_KEY_PATH 设置的路径读取该文件
+	//- 调用将在其下执行的组织 ID
+	//（默认为调用用户所属的资源所有者/组织，也可以针对每次调用单独指定）
 	client, err := management.NewClient(
 		ctx,
 		*issuer,
@@ -49,16 +49,16 @@ func main() {
 		}
 	}()
 
-	//call ZITADEL and print the name and creation date of your organisation
-	//the call was successful if no error occurred
+	//调用 ZITADEL，打印你所在组织的名称与创建日期
+	//若未发生错误，则说明调用成功
 	resp, err := client.GetMyOrg(ctx, &pb.GetMyOrgRequest{})
 	if err != nil {
 		log.Fatalln("call failed: ", err)
 	}
 	log.Printf("%s was created on: %s", resp.Org.Name, resp.Org.Details.CreationDate.AsTime())
 
-	//if you need an other organisation context for some call, you can overwrite it by setting the orgID directly
-	//for this example just set the `orgID` flag
+	//若某些调用需要切换到其他组织上下文，你可以通过直接设置 orgID 来覆盖它
+	//在本例中，只需设置 `orgID` 这个命令行参数即可
 	respOverwrite, err := client.GetMyOrg(middleware.SetOrgID(ctx, *orgID), &pb.GetMyOrgRequest{})
 	if err != nil {
 		log.Fatalln("call failed: ", err)

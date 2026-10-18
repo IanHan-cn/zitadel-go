@@ -13,17 +13,17 @@ import (
 )
 
 func TestConfigFromKeyFileData(t *testing.T) {
-	// generate a sample RSA private key for testing
+	// 生成一个用于测试的 RSA 私钥示例
 	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed to generate rsa key")
-	// and encode it to PEM format
+	// 并将其编码为 PEM 格式
 	privateKey := pem.EncodeToMemory(
 		&pem.Block{
 			Type:  "RSA PRIVATE KEY",
 			Bytes: x509.MarshalPKCS1PrivateKey(rsaKey),
 		},
 	)
-	// replace newlines with \n for JSON embedding
+	// 将换行符替换为 \n，以便嵌入 JSON 中
 	privateKeySingleLine := strings.ReplaceAll(string(privateKey), "\n", "\\n")
 
 	type args struct {
@@ -78,7 +78,7 @@ func TestConfigFromKeyFileData(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
 
-			// Test JSON marshaling as well
+			// 同时测试 JSON 序列化
 			data, err := got.MarshalJSON()
 			require.NoError(t, err)
 			require.JSONEq(t, string(tt.args.data), string(data))

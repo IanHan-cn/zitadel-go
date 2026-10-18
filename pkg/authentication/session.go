@@ -5,56 +5,52 @@ import (
 	"sync"
 )
 
-// Sessions is an abstraction of the session storage.
+// Sessions 是会话存储的抽象。
 type Sessions[T Ctx] interface {
 	Set(id string, session T) error
 	Get(id string) (T, error)
 }
 
-// InMemorySessions implements the [Sessions] interface by storing sessions
-// in application memory.
+// InMemorySessions 通过将会话保存在应用内存中来实现 [Sessions] 接口。
 //
-// ⚠️  Warning: Not suitable for production use
+// ⚠️  警告：不适合在生产环境中使用
 //
-// This implementation is fundamentally broken for production use and will
-// cause serious issues in real applications:
+// 该实现在生产环境中存在根本性缺陷，会给真实应用带来严重问题：
 //
-// Reliability problems:
-//   - All user sessions vanish instantly when your app restarts, crashes,
-//     or is redeployed - forcing every user to log in again
-//   - Zero fault tolerance - any server issue kills all active sessions
+// 可靠性问题：
+//   - 当应用重启、崩溃或重新部署时，所有用户会话会瞬间消失——导致每个用户都必须重新登录
+//   - 零容错能力——任何服务端故障都会让所有活跃会话失效
 //
-// Scalability problems:
-//   - Impossible to run multiple server instances - sessions exist only
-//     on one server, so load balancers will randomly break user logins
-//   - Cannot handle traffic spikes or distribute load
+// 可扩展性问题：
+//   - 无法运行多个服务实例——会话只存在于单台服务器上，负载均衡器会随机导致用户登录态失效
+//   - 无法应对流量高峰或进行负载分摊
 //
-// Security & resource problems:
-//   - Memory grows indefinitely - old sessions never expire or clean up
-//   - Will eventually crash your server by consuming all available RAM
-//   - No way to revoke sessions or handle security incidents
+// 安全与资源问题：
+//   - 内存无限增长——旧会话永不过期也不会被清理
+//   - 最终会耗尽全部可用内存，导致服务器崩溃
+//   - 无法吊销会话，也无法应对安全事件
 //
-// Production alternatives:
-//   - Use [WithCookieSession]() for stateless encrypted cookie sessions
-//   - Use Redis/Memcached for fast server-side sessions
-//   - Use database storage for persistent sessions
-//   - Implement your own [Sessions] interface with custom storage
+// 生产环境替代方案：
+//   - 使用 [WithCookieSession]() 实现无状态的加密 Cookie 会话
+//   - 使用 Redis/Memcached 实现快速的服务端会话
+//   - 使用数据库存储实现持久化会话
+//   - 自行实现 [Sessions] 接口，接入自定义存储
 //
-// Intended use: Local development, unit tests, and proof-of-concept demos only.
+// 适用场景：仅限本地开发、单元测试和概念验证演示。
 type InMemorySessions[T Ctx] struct {
 	mu       sync.RWMutex
 	sessions map[string]T
 }
 
-// NewInMemorySessions creates a new in-memory session store.
+// NewInMemorySessions 创建一个新的内存会话存储。
 //
-// ⚠️  Warning: Do not use in production - this will break your application!
-// See [InMemorySessions] documentation for why this is dangerous.
+// ⚠️  警告：请勿在生产环境中使用——这会让你的应用出问题！
+// 具体原因请参阅 [InMemorySessions] 的文档说明。
 //
-// For production use, consider [WithCookieSession]() for stateless sessions
-// or implement a proper session store.
+// 生产环境建议改用 [WithCookieSession]() 实现无状态会话，
+// 或者实现一个正式的会话存储。
 //
-// Only use for local development, testing, or learning purposes.
+// 仅用于本地开发、测试或学习目的。
 func NewInMemorySessions[T Ctx]() Sessions[T] {
 	return &InMemorySessions[T]{
 		sessions: make(map[string]T),

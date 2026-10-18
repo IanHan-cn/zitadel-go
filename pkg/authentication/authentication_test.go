@@ -159,8 +159,8 @@ func newExpiredAuthContext(subject string) testContext {
 	}
 }
 
-// TestIsAuthenticated_ExpiredSession asserts that a session which was valid when it was
-// stored, but has since expired, is rejected instead of being treated as still authenticated.
+// TestIsAuthenticated_ExpiredSession 断言：某个会话在保存时是有效的，
+// 但此后已过期，那么它应被拒绝，而不能仍被视为已认证。
 func TestIsAuthenticated_ExpiredSession(t *testing.T) {
 	handler := &stubHandler{}
 	initHandler := func(_ context.Context, _ *zitadel.Zitadel) (authentication.Handler[testContext], error) {
@@ -222,8 +222,8 @@ func newAuthContextWithExpiry(subject string, exp time.Time) testContext {
 	}
 }
 
-// TestCallback_CookieMaxAge asserts that the session cookie's Max-Age matches
-// the remaining lifetime of the ID token.
+// TestCallback_CookieMaxAge 断言会话 Cookie 的 Max-Age
+// 与 ID 令牌的剩余有效期一致。
 func TestCallback_CookieMaxAge(t *testing.T) {
 	encKey := generateEncryptionKey()
 	handler := &stubHandler{encKey: encKey}

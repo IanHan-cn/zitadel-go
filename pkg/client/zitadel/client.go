@@ -83,7 +83,7 @@ func NewConnection(ctx context.Context, issuer, api string, scopes []string, opt
 		return nil, err
 	}
 	dialOptions = append(dialOptions, opt)
-	//nolint:staticcheck // grpc.Dial is retained for compatibility with existing usage.
+	//nolint:staticcheck // 为与现有用法保持兼容，仍保留 grpc.Dial。
 	conn, err := grpc.Dial(c.api, dialOptions...)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func (c *Connection) setInterceptors(issuer, orgID string, scopes []string, jwtP
 
 func transportOption(api string, insecure bool, insecureSkipVerify bool) (grpc.DialOption, error) {
 	if insecure {
-		//nolint:staticcheck // WithInsecure is used for compatibility; callers control security.
+		//nolint:staticcheck // 使用 WithInsecure 是为了兼容性；安全性由调用方自行把控。
 		return grpc.WithInsecure(), nil
 	}
 	certs, err := transportCredentials(api, insecureSkipVerify)
@@ -149,7 +149,8 @@ func transportCredentials(api string, insecureSkipVerify bool) (credentials.Tran
 
 type Option func(*Connection) error
 
-// WithCustomURL replaces the standard issuer (https://issuer.zitadel.ch) and api endpoint (api.zitadel.ch:443)
+// WithCustomURL 用于替换默认的 issuer（https://issuer.zitadel.ch）
+// 和 api 端点（api.zitadel.ch:443）
 func WithCustomURL(issuer, api string) func(*Connection) error {
 	return func(client *Connection) error {
 		client.issuer = issuer
@@ -158,9 +159,9 @@ func WithCustomURL(issuer, api string) func(*Connection) error {
 	}
 }
 
-// WithTokenSource sets a generic oauth2.TokenSource for authentication.
-// This is the most flexible option and should be preferred.
-// If set, it will be used over WithJWTProfileTokenSource or WithJWTDirectTokenSource.
+// WithTokenSource 设置一个通用的 oauth2.TokenSource 用于认证。
+// 这是最灵活的选项，应优先使用。
+// 若设置了该选项，其优先级高于 WithJWTProfileTokenSource 或 WithJWTDirectTokenSource。
 func WithTokenSource(ts oauth2.TokenSource) Option {
 	return func(c *Connection) error {
 		c.tokenSource = ts
@@ -168,8 +169,8 @@ func WithTokenSource(ts oauth2.TokenSource) Option {
 	}
 }
 
-// WithJWTProfileTokenSource sets the provider used for the authentication
-// if not set, the key file will be read from the path set in env var ZITADEL_KEY_PATH
+// WithJWTProfileTokenSource 设置用于认证的 provider；
+// 若未设置，则会从环境变量 ZITADEL_KEY_PATH 指定的路径读取密钥文件
 func WithJWTProfileTokenSource(provider middleware.JWTProfileTokenSource) func(*Connection) error {
 	return func(client *Connection) error {
 		client.jwtProfileTokenSource = provider
@@ -177,7 +178,7 @@ func WithJWTProfileTokenSource(provider middleware.JWTProfileTokenSource) func(*
 	}
 }
 
-// Use a pre-signed JWT for authentication
+// WithJWTDirectTokenSource 使用一个预先签发的 JWT 进行认证
 func WithJWTDirectTokenSource(jwt string) func(*Connection) error {
 	return func(client *Connection) error {
 		client.jwtDirectTokenSource = func() (oauth2.TokenSource, error) {
@@ -190,8 +191,8 @@ func WithJWTDirectTokenSource(jwt string) func(*Connection) error {
 	}
 }
 
-// WithOrgID sets the organization context (where the api calls are executed)
-// if not set the resource owner (organization) of the calling user will be used
+// WithOrgID 设置组织上下文（即 API 调用在哪个组织下执行）；
+// 若未设置，则使用调用用户所属的资源所有者（组织）
 func WithOrgID(orgID string) func(*Connection) error {
 	return func(client *Connection) error {
 		client.orgID = orgID
@@ -199,8 +200,8 @@ func WithOrgID(orgID string) func(*Connection) error {
 	}
 }
 
-// WithInsecure disables transport security for the client connection
-// use only when absolutely necessary (local development)
+// WithInsecure 关闭客户端连接的传输层安全；
+// 仅在确有必要时使用（例如本地开发）
 func WithInsecure() func(*Connection) error {
 	return func(client *Connection) error {
 		client.insecure = true
@@ -208,8 +209,8 @@ func WithInsecure() func(*Connection) error {
 	}
 }
 
-// WithInsecureSkipVerifyTLS skips certificate verification when using TLS.
-// Use only for local development with self-signed certs.
+// WithInsecureSkipVerifyTLS 在使用 TLS 时跳过证书校验。
+// 仅用于使用自签名证书的本地开发场景。
 func WithInsecureSkipVerifyTLS() func(*Connection) error {
 	return func(client *Connection) error {
 		client.insecureSkipVerify = true
@@ -217,7 +218,7 @@ func WithInsecureSkipVerifyTLS() func(*Connection) error {
 	}
 }
 
-// WithTransportHeader sets a custom header on outgoing gRPC requests.
+// WithTransportHeader 为发出的 gRPC 请求设置自定义请求头。
 func WithTransportHeader(key, value string) func(*Connection) error {
 	return func(client *Connection) error {
 		client.transportHeaders[key] = value
@@ -225,7 +226,7 @@ func WithTransportHeader(key, value string) func(*Connection) error {
 	}
 }
 
-// WithUnaryInterceptors adds non ZITADEL specific interceptors to the connection
+// WithUnaryInterceptors 向连接中添加非 ZITADEL 特有的拦截器
 func WithUnaryInterceptors(interceptors ...grpc.UnaryClientInterceptor) func(*Connection) error {
 	return func(client *Connection) error {
 		client.unaryInterceptors = append(client.unaryInterceptors, interceptors...)
@@ -233,7 +234,7 @@ func WithUnaryInterceptors(interceptors ...grpc.UnaryClientInterceptor) func(*Co
 	}
 }
 
-// WithStreamInterceptors adds non ZITADEL specific interceptors to the connection
+// WithStreamInterceptors 向连接中添加非 ZITADEL 特有的拦截器
 func WithStreamInterceptors(interceptors ...grpc.StreamClientInterceptor) func(*Connection) error {
 	return func(client *Connection) error {
 		client.streamInterceptors = append(client.streamInterceptors, interceptors...)
@@ -241,7 +242,7 @@ func WithStreamInterceptors(interceptors ...grpc.StreamClientInterceptor) func(*
 	}
 }
 
-// WithDialOptions adds non ZITADEL specific dial options to the connection
+// WithDialOptions 向连接中添加非 ZITADEL 特有的拨号选项
 func WithDialOptions(opts ...grpc.DialOption) func(*Connection) error {
 	return func(client *Connection) error {
 		client.dialOptions = append(client.dialOptions, opts...)

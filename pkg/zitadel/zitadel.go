@@ -5,9 +5,9 @@ import (
 	"strconv"
 )
 
-// Zitadel provides the ability to interact with your ZITADEL instance.
-// This includes authentication, authorization as well as explicit API interaction
-// and is dependent of the provided information and initialization of such.
+// Zitadel 提供与你的 ZITADEL 实例进行交互的能力。
+// 这包括认证、授权以及显式的 API 调用，
+// 具体取决于所提供的信息及其初始化方式。
 type Zitadel struct {
 	domain                string
 	port                  string
@@ -30,11 +30,11 @@ func New(domain string, options ...Option) *Zitadel {
 	return zitadel
 }
 
-// Option allows customization of the [Zitadel] provider.
+// Option 用于对 [Zitadel] provider 进行定制。
 type Option func(*Zitadel)
 
-// WithInsecure allows to connect to a ZITADEL instance running without TLS
-// Do not use in production
+// WithInsecure 允许连接到未启用 TLS 的 ZITADEL 实例
+// 请勿在生产环境中使用
 func WithInsecure(port string) Option {
 	return func(z *Zitadel) {
 		z.port = port
@@ -42,30 +42,30 @@ func WithInsecure(port string) Option {
 	}
 }
 
-// WithInsecureSkipVerifyTLS allows to connect to a ZITADEL instance running with TLS but has an untrusted certificate
-// Do not use in production
+// WithInsecureSkipVerifyTLS 允许连接到启用了 TLS 但证书不受信任的 ZITADEL 实例
+// 请勿在生产环境中使用
 func WithInsecureSkipVerifyTLS() Option {
 	return func(z *Zitadel) {
 		z.insecureSkipVerifyTLS = true
 	}
 }
 
-// WithPort allows to connect to a ZITADEL instance running on a different port
+// WithPort 允许连接到运行在其他端口上的 ZITADEL 实例
 func WithPort(port uint16) Option {
 	return func(z *Zitadel) {
 		z.port = strconv.Itoa(int(port))
 	}
 }
 
-// WithTransportHeader allows to set custom headers (e.g. Proxy-Authorization) that will be sent
-// with both HTTP (authentication) and gRPC (API) requests.
+// WithTransportHeader 允许设置自定义请求头（例如 Proxy-Authorization），
+// 这些请求头会同时随 HTTP（认证）和 gRPC（API）请求一起发送。
 func WithTransportHeader(key, value string) Option {
 	return func(z *Zitadel) {
 		z.transportHeaders[key] = value
 	}
 }
 
-// Origin returns the HTTP Origin (schema://hostname[:port]), e.g.
+// Origin 返回 HTTP Origin（schema://hostname[:port]），例如：
 // https://your-instance.zitadel.cloud
 // https://your-domain.com
 // http://localhost:8080
@@ -73,7 +73,7 @@ func (z *Zitadel) Origin() string {
 	return buildOrigin(z.domain, z.port, z.tls)
 }
 
-// Host returns the domain:port (even if the default port is used)
+// Host 返回 domain:port（即使使用的是默认端口也会带上端口）
 func (z *Zitadel) Host() string {
 	return z.domain + ":" + z.port
 }

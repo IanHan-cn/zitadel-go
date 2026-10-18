@@ -1,6 +1,6 @@
 package client
 
 const (
-	//OrgHeader for setting the organisation context of client calls
+	// OrgHeader 用于设置客户端调用所处的组织上下文
 	OrgHeader = "x-zitadel-orgid"
 )

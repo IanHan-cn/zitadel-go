@@ -26,7 +26,7 @@ type KeyFile struct {
 	AppID    string `json:"appId,omitempty"`
 }
 
-// MarshalJSON implements the json.Marshaler interface for KeyType
+// MarshalJSON 为 KeyType 实现了 json.Marshaler 接口
 func (i *KeyFile) MarshalJSON() ([]byte, error) {
 	type Alias KeyFile
 	aux := &struct {
@@ -39,7 +39,7 @@ func (i *KeyFile) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aux)
 }
 
-// UnmarshalJSON implements the json.Unmarshaler interface for KeyType
+// UnmarshalJSON 为 KeyType 实现了 json.Unmarshaler 接口
 func (i *KeyFile) UnmarshalJSON(data []byte) error {
 	type Alias KeyFile
 	aux := &struct {

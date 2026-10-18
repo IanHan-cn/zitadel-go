@@ -8,13 +8,13 @@ const (
 	ctxKey key = 1
 )
 
-// Ctx represents the authentication context with information about the authenticated user.
+// Ctx 表示认证上下文，包含已认证用户的信息。
 type Ctx interface {
 	IsAuthenticated() bool
 }
 
-// Context returns a typed implementation the authentication context [Ctx].
-// It can be used to get information about the (authenticated) user.
+// Context 返回认证上下文 [Ctx] 的具体类型实现。
+// 可用它来获取（已认证）用户的信息。
 func Context[T Ctx](ctx context.Context) (t T) {
 	authCtx, ok := ctx.Value(ctxKey).(T)
 	if !ok {
@@ -23,7 +23,7 @@ func Context[T Ctx](ctx context.Context) (t T) {
 	return authCtx
 }
 
-// IsAuthenticated returns if the user is authenticated
+// IsAuthenticated 返回用户是否已通过认证
 func IsAuthenticated(ctx context.Context) bool {
 	authCtx := Context[Ctx](ctx)
 	if authCtx == nil {
@@ -32,8 +32,8 @@ func IsAuthenticated(ctx context.Context) bool {
 	return authCtx.IsAuthenticated()
 }
 
-// WithAuthContext allows to set the authentication context ([Ctx]), which can later be retrieved
-// by calling the [Context] function.
+// WithAuthContext 允许设置认证上下文（[Ctx]），
+// 之后可通过调用 [Context] 函数将其取出。
 func WithAuthContext[T Ctx](ctx context.Context, c T) context.Context {
 	return context.WithValue(ctx, ctxKey, c)
 }

@@ -8,7 +8,7 @@ const (
 	ctxKey key = 1
 )
 
-// Ctx represents the authorization context with information about the authorized user.
+// Ctx 表示授权上下文，包含已授权用户的信息。
 type Ctx interface {
 	IsAuthorized() bool
 	OrganizationID() string
@@ -20,8 +20,8 @@ type Ctx interface {
 	GetToken() string
 }
 
-// Context returns a typed implementation the authorization context [Ctx].
-// It can be used to get information about the (authorized) user / caller.
+// Context 返回授权上下文 [Ctx] 的具体类型实现。
+// 可用它来获取（已授权的）用户/调用方的信息。
 func Context[T Ctx](ctx context.Context) (t T) {
 	authCtx, ok := ctx.Value(ctxKey).(T)
 	if !ok {
@@ -30,36 +30,36 @@ func Context[T Ctx](ctx context.Context) (t T) {
 	return authCtx
 }
 
-// IsAuthorized returns if the caller is authorized
+// IsAuthorized 返回调用方是否已获得授权
 func IsAuthorized(ctx context.Context) bool {
 	return Context[Ctx](ctx).IsAuthorized()
 }
 
-// OrganizationID returns the ID of the organization the authorized user belongs to.
+// OrganizationID 返回已授权用户所属组织的 ID。
 func OrganizationID(ctx context.Context) string {
 	return Context[Ctx](ctx).OrganizationID()
 }
 
-// UserID returns if the ID of the authorized user.
-// In case of an unauthorized caller, the id is empty.
+// UserID 返回已授权用户的 ID。
+// 若调用方未获授权，则该 ID 为空。
 func UserID(ctx context.Context) string {
 	return Context[Ctx](ctx).UserID()
 }
 
-// IsGrantedRole returns if the authorized user is granted the requested role.
-// In case of an unauthorized caller, the returned value is false.
+// IsGrantedRole 返回已授权用户是否被授予了所请求的角色。
+// 若调用方未获授权，则返回 false。
 func IsGrantedRole(ctx context.Context, role string) bool {
 	return Context[Ctx](ctx).IsGrantedRole(role)
 }
 
-// IsGrantedRoleInOrganization returns if the authorized user is granted the requested role in the specified organisation.
-// In case of an unauthorized caller, the returned value is false.
+// IsGrantedRoleInOrganization 返回已授权用户是否在指定组织内被授予了所请求的角色。
+// 若调用方未获授权，则返回 false。
 func IsGrantedRoleInOrganization(ctx context.Context, role, organisationID string) bool {
 	return Context[Ctx](ctx).IsGrantedRoleInOrganization(role, organisationID)
 }
 
-// WithAuthContext allows to set the authorization context ([Ctx]), which can later be retrieved
-// by calling the [Context] function.
+// WithAuthContext 允许设置授权上下文（[Ctx]），
+// 之后可通过调用 [Context] 函数将其取出。
 func WithAuthContext[T Ctx](ctx context.Context, c T) context.Context {
 	return context.WithValue(ctx, ctxKey, c)
 }

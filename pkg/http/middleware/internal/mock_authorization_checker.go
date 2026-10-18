@@ -1,4 +1,4 @@
-// Package internal provides internal test utilities for the middleware package.
+// Package internal 为 middleware 包提供内部测试工具。
 package internal
 
 import (
@@ -7,15 +7,15 @@ import (
 	"github.com/zitadel/zitadel-go/v3/pkg/authorization"
 )
 
-// MockAuthorizationChecker is a mock implementation of authorization.AuthorizationChecker
-// for testing purposes. It returns pre-configured contexts and errors.
+// MockAuthorizationChecker 是用于测试的 authorization.AuthorizationChecker mock 实现。
+// 它会返回预先配置好的上下文或错误。
 type MockAuthorizationChecker struct {
 	Ctx *MockAuthContext
 	Err error
 }
 
-// CheckAuthorization returns the pre-configured context or error.
-// The parameters are intentionally unused as this is a test mock.
+// CheckAuthorization 返回预先配置好的上下文或错误。
+// 由于这是测试用的 mock，参数有意不使用。
 func (m *MockAuthorizationChecker) CheckAuthorization(_ context.Context, _ string, _ ...authorization.CheckOption) (*MockAuthContext, error) {
 	if m.Err != nil {
 		return nil, m.Err
@@ -23,8 +23,8 @@ func (m *MockAuthorizationChecker) CheckAuthorization(_ context.Context, _ strin
 	return m.Ctx, nil
 }
 
-// MockAuthContext is a mock implementation of authorization.Ctx for testing purposes.
-// It stores user and organization information and tracks role grants.
+// MockAuthContext 是用于测试的 authorization.Ctx mock 实现。
+// 它保存用户与组织信息，并记录角色授予情况。
 type MockAuthContext struct {
 	id    string
 	orgID string
@@ -32,7 +32,7 @@ type MockAuthContext struct {
 	roles map[string]bool
 }
 
-// NewMockAuthContext creates a new MockAuthContext with the specified user and organization IDs.
+// NewMockAuthContext 使用指定的用户 ID 和组织 ID 创建一个新的 MockAuthContext。
 func NewMockAuthContext(userID, organizationID string) *MockAuthContext {
 	return &MockAuthContext{
 		id:    userID,
@@ -40,7 +40,7 @@ func NewMockAuthContext(userID, organizationID string) *MockAuthContext {
 	}
 }
 
-// NewMockAuthContextWithRoles creates a new MockAuthContext with roles.
+// NewMockAuthContextWithRoles 创建一个带有角色信息的 MockAuthContext。
 func NewMockAuthContextWithRoles(userID string, roles map[string]bool) *MockAuthContext {
 	return &MockAuthContext{
 		id:    userID,
@@ -48,22 +48,22 @@ func NewMockAuthContextWithRoles(userID string, roles map[string]bool) *MockAuth
 	}
 }
 
-// SetToken sets the authorization token.
+// SetToken 设置授权令牌。
 func (m *MockAuthContext) SetToken(token string) {
 	m.token = token
 }
 
-// GetToken returns the authorization token.
+// GetToken 返回授权令牌。
 func (m *MockAuthContext) GetToken() string {
 	return m.token
 }
 
-// IsAuthorized returns true if the context is not nil.
+// IsAuthorized 在上下文不为 nil 时返回 true。
 func (m *MockAuthContext) IsAuthorized() bool {
 	return m != nil
 }
 
-// OrganizationID returns the organization ID.
+// OrganizationID 返回组织 ID。
 func (m *MockAuthContext) OrganizationID() string {
 	if m == nil {
 		return ""
@@ -71,7 +71,7 @@ func (m *MockAuthContext) OrganizationID() string {
 	return m.orgID
 }
 
-// UserID returns the user ID.
+// UserID 返回用户 ID。
 func (m *MockAuthContext) UserID() string {
 	if m == nil {
 		return ""
@@ -79,7 +79,7 @@ func (m *MockAuthContext) UserID() string {
 	return m.id
 }
 
-// IsGrantedRole checks if the given role is granted.
+// IsGrantedRole 检查给定的角色是否已被授予。
 func (m *MockAuthContext) IsGrantedRole(role string) bool {
 	if m == nil || m.roles == nil {
 		return false
@@ -87,12 +87,12 @@ func (m *MockAuthContext) IsGrantedRole(role string) bool {
 	return m.roles[role]
 }
 
-// IsGrantedRoleInOrganization always returns false in this mock implementation.
+// IsGrantedRoleInOrganization 在该 mock 实现中始终返回 false。
 func (m *MockAuthContext) IsGrantedRoleInOrganization(_, _ string) bool {
 	return false
 }
 
-// IsGrantedRoleInProject always returns false in this mock implementation.
+// IsGrantedRoleInProject 在该 mock 实现中始终返回 false。
 func (m *MockAuthContext) IsGrantedRoleInProject(_, _, _ string) bool {
 	return false
 }

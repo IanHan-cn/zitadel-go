@@ -4,8 +4,7 @@ import (
 	"errors"
 )
 
-// UnauthorizedErr is used to provide the information to the caller, that the provided authorization
-// is invalid (missing, wrong format, expired, ...).
+// UnauthorizedErr 用于告知调用方：所提供的授权信息无效（缺失、格式错误、已过期等）。
 type UnauthorizedErr struct {
 	err error
 }
@@ -38,8 +37,7 @@ func (e *UnauthorizedErr) Unwrap() error {
 	return e.err
 }
 
-// PermissionDeniedErr is used to provide the information to the caller, that the provided authorization
-// was valid but not sufficient (missing role).
+// PermissionDeniedErr 用于告知调用方：所提供的授权信息有效但不充分（缺少角色）。
 type PermissionDeniedErr struct {
 	err error
 }
@@ -72,8 +70,8 @@ func (e *PermissionDeniedErr) Unwrap() error {
 	return e.err
 }
 
-// ServiceUnavailableErr is used to indicate that the authorization service is temporarily unavailable (5xx errors).
-// This allows downstream code to distinguish between client errors (4xx) and server errors (5xx).
+// ServiceUnavailableErr 用于表示授权服务暂时不可用（5xx 错误）。
+// 这使得下游代码能够区分客户端错误（4xx）与服务端错误（5xx）。
 type ServiceUnavailableErr struct {
 	err error
 }

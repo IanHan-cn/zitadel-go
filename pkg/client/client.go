@@ -65,16 +65,17 @@ type clientOptions struct {
 
 type Option func(*clientOptions)
 
-// WithAuth allows to set a token source as authorization, e.g. [PAT], resp. provide an authentication mechanism,
-// such as JWT Profile ([JWTAuthentication]) or Password ([PasswordAuthentication]) for service users.
+// WithAuth 允许设置一个令牌来源作为授权凭据，例如 [PAT]；
+// 或者为服务用户提供某种认证机制，
+// 如 JWT Profile（[JWTAuthentication]）或密码方式（[PasswordAuthentication]）。
 func WithAuth(initTokenSource TokenSourceInitializer) Option {
 	return func(c *clientOptions) {
 		c.initTokenSource = initTokenSource
 	}
 }
 
-// WithGRPCDialOptions allows to use custom grpc dial options when establishing connection with Zitadel.
-// Multiple calls to WithGRPCDialOptions is allowed, options will be appended.
+// WithGRPCDialOptions 允许在与 Zitadel 建立连接时使用自定义的 grpc 拨号选项。
+// 可以多次调用 WithGRPCDialOptions，选项会被追加。
 func WithGRPCDialOptions(opts ...grpc.DialOption) Option {
 	return func(c *clientOptions) {
 		c.grpcDialOptions = append(c.grpcDialOptions, opts...)
@@ -206,11 +207,11 @@ func newConnection(
 
 	dialOptions = append(dialOptions, opts...)
 
-	//nolint:staticcheck // grpc.DialContext is kept for backward compatibility across supported gRPC versions.
+	//nolint:staticcheck // 为在所支持的各 gRPC 版本间保持向后兼容，仍保留 grpc.DialContext。
 	return grpc.DialContext(ctx, zitadel.Host(), dialOptions...)
 }
 
-// Deprecated: use ActionServiceV2 instead
+// Deprecated: 请改用 ActionServiceV2。
 func (c *Client) ActionServiceV2Beta() actionV2Beta.ActionServiceClient {
 	return c.actionServiceV2Beta.Get(func() actionV2Beta.ActionServiceClient {
 		return actionV2Beta.NewActionServiceClient(c.connection)
@@ -235,7 +236,7 @@ func (c *Client) TelemetryServiceV2Beta() analyticsV2Beta.TelemetryServiceClient
 	})
 }
 
-// Deprecated: use ApplicationServiceV2 instead
+// Deprecated: 请改用 ApplicationServiceV2。
 func (c *Client) AppServiceV2Beta() appV2Beta.AppServiceClient {
 	return c.appServiceV2Beta.Get(func() appV2Beta.AppServiceClient {
 		return appV2Beta.NewAppServiceClient(c.connection)
@@ -254,7 +255,7 @@ func (c *Client) AuthService() auth.AuthServiceClient {
 	})
 }
 
-// Deprecated: use AuthorizationServiceV2 instead
+// Deprecated: 请改用 AuthorizationServiceV2。
 func (c *Client) AuthorizationServiceV2Beta() authorizationV2Beta.AuthorizationServiceClient {
 	return c.authorizationServiceV2Beta.Get(func() authorizationV2Beta.AuthorizationServiceClient {
 		return authorizationV2Beta.NewAuthorizationServiceClient(c.connection)
@@ -267,7 +268,7 @@ func (c *Client) AuthorizationServiceV2() authorizationV2.AuthorizationServiceCl
 	})
 }
 
-// Deprecated: use FeatureServiceV2 instead
+// Deprecated: 请改用 FeatureServiceV2。
 func (c *Client) FeatureServiceV2Beta() featureV2Beta.FeatureServiceClient {
 	return c.featureServiceV2Beta.Get(func() featureV2Beta.FeatureServiceClient {
 		return featureV2Beta.NewFeatureServiceClient(c.connection)
@@ -280,7 +281,7 @@ func (c *Client) FeatureServiceV2() featureV2.FeatureServiceClient {
 	})
 }
 
-// Deprecated: use InstanceServiceV2 instead
+// Deprecated: 请改用 InstanceServiceV2。
 func (c *Client) InstanceServiceV2Beta() instanceV2Beta.InstanceServiceClient {
 	return c.instanceServiceV2Beta.Get(func() instanceV2Beta.InstanceServiceClient {
 		return instanceV2Beta.NewInstanceServiceClient(c.connection)
@@ -293,7 +294,7 @@ func (c *Client) InstanceServiceV2() instanceV2.InstanceServiceClient {
 	})
 }
 
-// Deprecated: use InternalPermissionServiceV2 instead
+// Deprecated: 请改用 InternalPermissionServiceV2。
 func (c *Client) InternalPermissionServiceV2Beta() internalPermissionV2Beta.InternalPermissionServiceClient {
 	return c.internalPermissionServiceV2Beta.Get(func() internalPermissionV2Beta.InternalPermissionServiceClient {
 		return internalPermissionV2Beta.NewInternalPermissionServiceClient(c.connection)
@@ -318,7 +319,7 @@ func (c *Client) IdpServiceV2() idpV2.IdentityProviderServiceClient {
 	})
 }
 
-// Deprecated: use OIDCServiceV2 instead
+// Deprecated: 请改用 OIDCServiceV2。
 func (c *Client) OIDCService() oidcV2Beta.OIDCServiceClient {
 	return c.oidcService.Get(func() oidcV2Beta.OIDCServiceClient {
 		return oidcV2Beta.NewOIDCServiceClient(c.connection)
@@ -331,7 +332,7 @@ func (c *Client) OIDCServiceV2() oidcV2.OIDCServiceClient {
 	})
 }
 
-// Deprecated: use OrganizationServiceV2 instead
+// Deprecated: 请改用 OrganizationServiceV2。
 func (c *Client) OrganizationService() orgV2Beta.OrganizationServiceClient {
 	return c.organizationService.Get(func() orgV2Beta.OrganizationServiceClient {
 		return orgV2Beta.NewOrganizationServiceClient(c.connection)
@@ -344,7 +345,7 @@ func (c *Client) OrganizationServiceV2() orgV2.OrganizationServiceClient {
 	})
 }
 
-// Deprecated: use ProjectServiceV2 instead
+// Deprecated: 请改用 ProjectServiceV2。
 func (c *Client) ProjectServiceV2Beta() projectV2Beta.ProjectServiceClient {
 	return c.projectServiceV2Beta.Get(func() projectV2Beta.ProjectServiceClient {
 		return projectV2Beta.NewProjectServiceClient(c.connection)
@@ -363,7 +364,7 @@ func (c *Client) SAMLServiceV2() samlV2.SAMLServiceClient {
 	})
 }
 
-// Deprecated: use SessionServiceV2 instead
+// Deprecated: 请改用 SessionServiceV2。
 func (c *Client) SessionService() sessionV2Beta.SessionServiceClient {
 	return c.sessionService.Get(func() sessionV2Beta.SessionServiceClient {
 		return sessionV2Beta.NewSessionServiceClient(c.connection)
@@ -376,7 +377,7 @@ func (c *Client) SessionServiceV2() sessionV2.SessionServiceClient {
 	})
 }
 
-// Deprecated: use SettingsServiceV2 instead
+// Deprecated: 请改用 SettingsServiceV2。
 func (c *Client) SettingsService() settingsV2Beta.SettingsServiceClient {
 	return c.settingsService.Get(func() settingsV2Beta.SettingsServiceClient {
 		return settingsV2Beta.NewSettingsServiceClient(c.connection)
@@ -395,7 +396,7 @@ func (c *Client) SystemService() system.SystemServiceClient {
 	})
 }
 
-// Deprecated: use UserServiceV2 instead
+// Deprecated: 请改用 UserServiceV2。
 func (c *Client) UserService() userV2Beta.UserServiceClient {
 	return c.userService.Get(func() userV2Beta.UserServiceClient {
 		return userV2Beta.NewUserServiceClient(c.connection)
@@ -408,7 +409,7 @@ func (c *Client) UserServiceV2() userV2.UserServiceClient {
 	})
 }
 
-// Deprecated: use WebkeyServiceV2 instead
+// Deprecated: 请改用 WebkeyServiceV2。
 func (c *Client) WebkeyServiceV2() webkeyV2.WebKeyServiceClient {
 	return c.webkeyServiceV2.Get(func() webkeyV2.WebKeyServiceClient {
 		return webkeyV2.NewWebKeyServiceClient(c.connection)
@@ -421,10 +422,10 @@ func (c *Client) WebkeyServiceV2Beta() webkeyV2Beta.WebKeyServiceClient {
 	})
 }
 
-// GetValidToken retrieves a valid access token from the client's token source.
-// This is useful when you need to make direct API calls to endpoints not covered by the SDK.
-// The token will be automatically refreshed if it has expired.
-// Returns an empty string if no token source was configured during client creation.
+// GetValidToken 从客户端的令牌来源中获取一个有效的访问令牌。
+// 当你需要直接调用 SDK 未覆盖的接口时，这个方法会很有用。
+// 若令牌已过期，它会自动刷新。
+// 若创建客户端时未配置令牌来源，则返回空字符串。
 func (c *Client) GetValidToken() (string, error) {
 	if c.tokenSource == nil {
 		return "", nil

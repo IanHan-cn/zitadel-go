@@ -20,16 +20,16 @@ var (
 	ErrIntrospectionFailed        = errors.New("token introspection failed")
 )
 
-// IntrospectionVerification provides an [authorization.Verifier] implementation
-// by validating the provided token with an OAuth2 Introspection call.
-// Use [WithIntrospection] for implementation.
+// IntrospectionVerification 通过 OAuth2 Introspection 调用来校验传入的令牌，
+// 从而提供了 [authorization.Verifier] 的实现。
+// 具体实现请使用 [WithIntrospection]。
 type IntrospectionVerification[T any] struct {
 	rs.ResourceServer
 }
 
-// WithIntrospection creates the OAuth2 Introspection implementation of the [authorization.Verifier] interface.
-// The introspection endpoint itself requires some [IntrospectionAuthentication] of the client.
-// Possible implementation are [JWTProfileIntrospectionAuthentication] and [ClientIDSecretIntrospectionAuthentication].
+// WithIntrospection 创建 [authorization.Verifier] 接口的 OAuth2 Introspection 实现。
+// introspection 端点本身要求客户端提供某种 [IntrospectionAuthentication] 认证方式。
+// 可选的实现有 [JWTProfileIntrospectionAuthentication] 和 [ClientIDSecretIntrospectionAuthentication]。
 func WithIntrospection[T authorization.Ctx](auth IntrospectionAuthentication) authorization.VerifierInitializer[T] {
 	return func(ctx context.Context, zitadel *zitadel.Zitadel) (authorization.Verifier[T], error) {
 		resourceServer, err := auth(ctx, zitadel.Origin())
@@ -44,27 +44,27 @@ func WithIntrospection[T authorization.Ctx](auth IntrospectionAuthentication) au
 
 type IntrospectionAuthentication func(ctx context.Context, issuer string) (rs.ResourceServer, error)
 
-// IntrospectionAuthenticationJWTProfile allows you to authenticate the introspection
-// request with JWT Profile using a key.json provided by ZITADEL.
+// IntrospectionAuthenticationJWTProfile 允许使用 ZITADEL 提供的 key.json，
+// 通过 JWT Profile 对 introspection 请求进行认证。
 func IntrospectionAuthenticationJWTProfile(file *client.KeyFile) IntrospectionAuthentication {
 	return func(ctx context.Context, issuer string) (rs.ResourceServer, error) {
 		return rs.NewResourceServerJWTProfile(ctx, issuer, file.ClientID, file.KeyID, []byte(file.Key))
 	}
 }
 
-// JWTProfileIntrospectionAuthentication allows you to authenticate the introspection
-// request with JWT Profile using a key.json provided by ZITADEL.
-// Deprecated: Use [IntrospectionAuthenticationJWTProfile] instead, which uses the correct [client.KeyFile] type.
+// JWTProfileIntrospectionAuthentication 允许使用 ZITADEL 提供的 key.json，
+// 通过 JWT Profile 对 introspection 请求进行认证。
+// 已废弃：请改用 [IntrospectionAuthenticationJWTProfile]，它使用了正确的 [client.KeyFile] 类型。
 //
-//nolint:staticcheck // Keep deprecated signature for backward compatibility.
+//nolint:staticcheck // 为向后兼容保留该废弃签名。
 func JWTProfileIntrospectionAuthentication(file *oidc_client.KeyFile) IntrospectionAuthentication {
 	return func(ctx context.Context, issuer string) (rs.ResourceServer, error) {
 		return rs.NewResourceServerJWTProfile(ctx, issuer, file.ClientID, file.KeyID, []byte(file.Key))
 	}
 }
 
-// ClientIDSecretIntrospectionAuthentication allows you to authenticate the introspection
-// request with the client_id and client_secret provided by Zitadel.
+// ClientIDSecretIntrospectionAuthentication 允许使用 Zitadel 提供的
+// client_id 和 client_secret 对 introspection 请求进行认证。
 //
 //goland:noinspection GoUnusedExportedFunction
 func ClientIDSecretIntrospectionAuthentication(clientID, clientSecret string) IntrospectionAuthentication {
@@ -73,8 +73,8 @@ func ClientIDSecretIntrospectionAuthentication(clientID, clientSecret string) In
 	}
 }
 
-// DefaultAuthorization is a short version of [WithIntrospection[*IntrospectionContext](JWTProfileIntrospectionAuthentication)]
-// with a key.json read from a provided path.
+// DefaultAuthorization 是 [WithIntrospection[*IntrospectionContext](JWTProfileIntrospectionAuthentication)]
+// 的简化版本，会从给定路径读取 key.json。
 func DefaultAuthorization(path string) authorization.VerifierInitializer[*IntrospectionContext] {
 	c, err := client.ConfigFromKeyFile(path)
 	if err != nil {
@@ -85,9 +85,9 @@ func DefaultAuthorization(path string) authorization.VerifierInitializer[*Intros
 	return WithIntrospection[*IntrospectionContext](IntrospectionAuthenticationJWTProfile(c))
 }
 
-// CheckAuthorization implements the [authorization.Verifier] interface by
-// checking the authorizationToken on the OAuth2 introspection endpoint.
-// On success, it will return a generic struct of type [T] of the [IntrospectionVerification].
+// CheckAuthorization 通过在 OAuth2 introspection 端点上校验 authorizationToken，
+// 实现了 [authorization.Verifier] 接口。
+// 校验成功时，它会返回 [IntrospectionVerification] 中类型为 [T] 的泛型结构体。
 func (i *IntrospectionVerification[T]) CheckAuthorization(ctx context.Context, authorizationToken string) (resp T, err error) {
 	accessToken, ok := strings.CutPrefix(authorizationToken, oidc.BearerToken)
 	if !ok {

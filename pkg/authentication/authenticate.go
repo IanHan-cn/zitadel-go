@@ -20,15 +20,15 @@ var (
 	ErrNoSession = errors.New("no session")
 )
 
-// AuthenticationChecker defines the interface for checking authentication.
-// This interface allows for mocking in tests.
+// AuthenticationChecker 定义了用于检查认证状态的接口。
+// 该接口便于在测试中通过 mock 替换实现。
 type AuthenticationChecker[T Ctx] interface {
 	IsAuthenticated(req *http.Request) (T, error)
 	Authenticate(w http.ResponseWriter, r *http.Request, requestedURI string)
 }
 
-// Authenticator provides the functionality to handle authentication including check for existing session,
-// starting a new authentication by redirecting the user to the Login UI and more.
+// Authenticator 提供认证相关的处理能力，包括检查已有会话、
+// 通过将用户重定向到登录界面来发起新的认证等。
 type Authenticator[T Ctx] struct {
 	authN                 Handler[T]
 	logger                *slog.Logger
@@ -42,62 +42,62 @@ type Authenticator[T Ctx] struct {
 	onAuthenticated       OnAuthenticatedFunc[T]
 }
 
-// compile-time check that Authenticator implements AuthenticationChecker
+// 编译期检查，确保 Authenticator 实现了 AuthenticationChecker
 var _ AuthenticationChecker[Ctx] = (*Authenticator[Ctx])(nil)
 
-// Option allows customization of the [Authenticator] such as logging and more.
+// Option 用于对 [Authenticator] 进行定制，例如日志等。
 type Option[T Ctx] func(authorizer *Authenticator[T])
 
-// WithLogger allows a logger other than slog.Default().
+// WithLogger 允许使用 slog.Default() 之外的日志记录器。
 func WithLogger[T Ctx](logger *slog.Logger) Option[T] {
 	return func(a *Authenticator[T]) {
 		a.logger = logger
 	}
 }
 
-// WithCookieSession enables stateless session handling where the whole context
-// (including tokens) is stored in the session cookie, encrypted.
-// This avoids the need for a server-side session store but increases cookie size.
+// WithCookieSession 启用无状态会话处理：整个上下文（包括令牌）
+// 会被加密后存放在会话 Cookie 中。
+// 这样可以免去服务端会话存储，但会增大 Cookie 的体积。
 func WithCookieSession[T Ctx]() Option[T] {
 	return func(a *Authenticator[T]) {
 		a.useCookieSession = true
 	}
 }
 
-// WithSessionStore allows a session store other than [InMemorySessions].
+// WithSessionStore 允许使用 [InMemorySessions] 之外的会话存储。
 func WithSessionStore[T Ctx](sessions Sessions[T]) Option[T] {
 	return func(a *Authenticator[T]) {
 		a.sessions = sessions
 	}
 }
 
-// WithSessionCookieName allows a session cookie name other than "zitadel.session".
+// WithSessionCookieName 允许使用 "zitadel.session" 之外的会话 Cookie 名称。
 func WithSessionCookieName[T Ctx](cookieName string) Option[T] {
 	return func(a *Authenticator[T]) {
 		a.sessionCookieName = cookieName
 	}
 }
 
-// WithExternalSecure allows using https redirects when the service is behind a reverse proxy.
+// WithExternalSecure 允许在服务位于反向代理之后时使用 https 重定向。
 func WithExternalSecure[T Ctx](externalSecure bool) Option[T] {
 	return func(a *Authenticator[T]) {
 		a.externalSecure = externalSecure
 	}
 }
 
-// WithPostLogoutRedirectURI allows specifying the URL the user is redirected to after a successful logout.
+// WithPostLogoutRedirectURI 允许指定用户成功登出后被重定向到的 URL。
 func WithPostLogoutRedirectURI[T Ctx](uri string) Option[T] {
 	return func(a *Authenticator[T]) {
 		a.postLogoutRedirectURI = uri
 	}
 }
 
-// OnAuthenticatedFunc is called after a successful OIDC callback,
-// before the session is stored and the user is redirected.
+// OnAuthenticatedFunc 在 OIDC 回调成功后、
+// 会话被保存且用户被重定向之前调用。
 type OnAuthenticatedFunc[T Ctx] func(ctx context.Context, authCtx T) error
 
-// WithOnAuthenticated registers a hook that is invoked after a successful authentication
-// in the callback. If the hook returns an error, the login is aborted with a 500 status.
+// WithOnAuthenticated 注册一个钩子，在回调中认证成功后被调用。
+// 如果该钩子返回错误，登录流程将中止并返回 500 状态码。
 func WithOnAuthenticated[T Ctx](fn OnAuthenticatedFunc[T]) Option[T] {
 	return func(a *Authenticator[T]) {
 		a.onAuthenticated = fn
@@ -123,13 +123,13 @@ func New[T Ctx](ctx context.Context, zitadel *zitadel.Zitadel, encryptionKey str
 	return authenticator, nil
 }
 
-// ServeHTTP serves the authentication handler and its three subroutes.
+// ServeHTTP 为认证处理器及其三个子路由提供服务。
 func (a *Authenticator[T]) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.StripPrefix("/auth", a.router).ServeHTTP(w, r)
 }
 
-// Authenticate starts a new authentication (by redirecting the user to the Login UI)
-// The initially requested URI (in the application) is passed as encrypted state.
+// Authenticate 发起一次新的认证（通过将用户重定向到登录界面）。
+// 应用中最初请求的 URI 会作为加密后的 state 传递。
 func (a *Authenticator[T]) Authenticate(w http.ResponseWriter, r *http.Request, requestedURI string) {
 	s := &State{RequestedURI: requestedURI}
 	stateParam, err := s.Encrypt(a.encryptionKey)
@@ -141,9 +141,9 @@ func (a *Authenticator[T]) Authenticate(w http.ResponseWriter, r *http.Request, 
 	a.authN.Authenticate(w, r, stateParam)
 }
 
-// Callback handles the redirect back from the Login UI. On successful authentication a new session
-// will be created and its id will be stored in a cookie.
-// The user will be redirected to the initially requested UI (passed as encrypted state)
+// Callback 处理从登录界面回跳的请求。认证成功时会创建一个新会话，
+// 并将其 ID 存入 Cookie。
+// 用户将被重定向到最初请求的界面（作为加密 state 传入）
 func (a *Authenticator[T]) Callback(w http.ResponseWriter, req *http.Request) {
 	authCtx, stateParam := a.authN.Callback(w, req)
 	if !authCtx.IsAuthenticated() {
@@ -174,13 +174,13 @@ func (a *Authenticator[T]) Callback(w http.ResponseWriter, req *http.Request) {
 	var maxAge int
 	if expAuthCtx, ok := any(authCtx).(interface{ GetExpiration() time.Time }); ok {
 		if exp := expAuthCtx.GetExpiration(); !exp.IsZero() {
-			// Avoid rounding down to 0 which turns it into a browser-session
+			// 避免向下取整为 0，否则会退化成浏览器会话级别的 Cookie
 			maxAge = max(int(time.Until(exp).Seconds()), 1)
 		}
 	}
 
 	if a.useCookieSession {
-		// Stateless mode: Serialize and encrypt the entire context into the cookie.
+		// 无状态模式：将整个上下文序列化并加密后写入 Cookie。
 		data, err := json.Marshal(authCtx)
 		if err != nil {
 			a.logger.Error("unable to serialize auth context", "error", err)
@@ -196,7 +196,7 @@ func (a *Authenticator[T]) Callback(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Original stateful mode: Store session in memory.
+	// 原有有状态模式：将会话保存在内存中。
 	id := uuid.NewString()
 	if err = a.sessions.Set(id, authCtx); err != nil {
 		a.logger.Error("unable to save session", "error", err, "id", id)
@@ -211,7 +211,7 @@ func (a *Authenticator[T]) Callback(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, redirectURI, http.StatusFound)
 }
 
-// Logout will terminate the existing session.
+// Logout 会终止当前已有的会话。
 func (a *Authenticator[T]) Logout(w http.ResponseWriter, req *http.Request) {
 	authCtx, err := a.IsAuthenticated(req)
 	if err != nil {
@@ -229,7 +229,7 @@ func (a *Authenticator[T]) Logout(w http.ResponseWriter, req *http.Request) {
 
 	postLogout := a.postLogoutRedirectURI
 	if postLogout == "" {
-		// If no custom URI is set, use the original, default logic
+		// 若未设置自定义 URI，则沿用原有的默认逻辑
 		proto := "http"
 		if req.TLS != nil || a.externalSecure {
 			proto = "https"
@@ -240,8 +240,8 @@ func (a *Authenticator[T]) Logout(w http.ResponseWriter, req *http.Request) {
 	a.authN.Logout(w, req, authCtx, stateParam, postLogout)
 }
 
-// IsAuthenticated checks whether there is an existing session of not.
-// In case there is one, it will be returned.
+// IsAuthenticated 检查当前是否已存在会话。
+// 若存在，则将其返回。
 func (a *Authenticator[T]) IsAuthenticated(req *http.Request) (T, error) {
 	var t T
 	cookie, err := req.Cookie(a.sessionCookieName)
@@ -255,7 +255,7 @@ func (a *Authenticator[T]) IsAuthenticated(req *http.Request) (T, error) {
 	}
 
 	if a.useCookieSession {
-		// Stateless mode: Deserialize the context directly from the cookie.
+		// 无状态模式：直接从 Cookie 中反序列化上下文。
 		if err = json.Unmarshal([]byte(sessionValue), &t); err != nil {
 			a.logger.Log(req.Context(), slog.LevelWarn, "unable to deserialize auth context from cookie")
 			return t, ErrNoSession
@@ -268,7 +268,7 @@ func (a *Authenticator[T]) IsAuthenticated(req *http.Request) (T, error) {
 		return t, nil
 	}
 
-	// Original stateful mode: Use decrypted value as session ID to look up in the store.
+	// 原有有状态模式：将解密后的值作为会话 ID 在存储中查找。
 	session, err := a.sessions.Get(sessionValue)
 	if err != nil {
 		a.logger.Log(req.Context(), slog.LevelWarn, "no session found for cookie", "sessionID", sessionValue)
@@ -325,12 +325,12 @@ func (a *Authenticator[T]) deleteSessionCookie(w http.ResponseWriter) {
 	})
 }
 
-// Handler defines the handling of authentication and logout
+// Handler 定义了认证与登出的处理方式
 type Handler[T Ctx] interface {
 	Authenticate(w http.ResponseWriter, r *http.Request, state string)
 	Callback(w http.ResponseWriter, r *http.Request) (t T, state string)
 	Logout(w http.ResponseWriter, r *http.Request, authCtx T, state, optionalRedirectURI string)
 }
 
-// HandlerInitializer abstracts the initialization of a [Handler] by providing the ZITADEL domain, port and if tls is set
+// HandlerInitializer 抽象了 [Handler] 的初始化过程，提供 ZITADEL 域名、端口以及是否启用 tls
 type HandlerInitializer[T Ctx] func(ctx context.Context, zitadel *zitadel.Zitadel) (Handler[T], error)

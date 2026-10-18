@@ -46,8 +46,8 @@ func computeSignature(t time.Time, payload []byte, signingKey string) []byte {
 	return mac.Sum(nil)
 }
 
-// ValidateRequestPayload validates the request payload against the Zitadel-Signature header.
-// This function extracts the Zitadel-Signature header from the request headers.
+// ValidateRequestPayload 依据 Zitadel-Signature 请求头校验请求体。
+// 该函数会从请求头中提取 Zitadel-Signature。
 func ValidateRequestPayload(payload []byte, reqHeader *http.Header, signingKey string) error {
 	if reqHeader == nil {
 		return ErrMissingHeader
@@ -56,12 +56,12 @@ func ValidateRequestPayload(payload []byte, reqHeader *http.Header, signingKey s
 	return ValidatePayloadWithTolerance(payload, header, signingKey, DefaultTolerance)
 }
 
-// ValidatePayload validates the payload against the Zitadel-Signature header.
+// ValidatePayload 依据 Zitadel-Signature 请求头校验请求体。
 func ValidatePayload(payload []byte, header string, signingKey string) error {
 	return ValidatePayloadWithTolerance(payload, header, signingKey, DefaultTolerance)
 }
 
-// ValidatePayloadWithTolerance validates the payload against the Zitadel-Signature header with a given tolerance.
+// ValidatePayloadWithTolerance 依据 Zitadel-Signature 请求头校验请求体，并允许指定时间容差。
 func ValidatePayloadWithTolerance(payload []byte, header string, signingKey string, tolerance time.Duration) error {
 	return validatePayload(payload, header, signingKey, tolerance, true)
 }

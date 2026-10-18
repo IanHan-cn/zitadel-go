@@ -13,10 +13,10 @@ type OrgInterceptor struct {
 	orgID string
 }
 
-// NewOrgInterceptor statically set the organisation context for every call
+// NewOrgInterceptor 为每一次调用静态地设置组织上下文
 //
-// If you need to switch between multiple organisations for different requests, use the SetOrgID function
-// directly on your calls (see example/mgmt/mgmt.go)
+// 如果你需要在不同请求间切换多个组织，请直接在调用处使用 SetOrgID 函数
+// （参见 example/mgmt/mgmt.go）
 func NewOrgInterceptor(orgID string) *OrgInterceptor {
 	return &OrgInterceptor{
 		orgID: orgID,
@@ -35,7 +35,7 @@ func (interceptor *OrgInterceptor) Stream() grpc.StreamClientInterceptor {
 	}
 }
 
-// SetOrgID passes the orgID used for the organization context (where the api calls are executed)
+// SetOrgID 传递用于组织上下文（即 API 调用在哪个组织下执行）的 orgID
 func SetOrgID(ctx context.Context, orgID string) context.Context {
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {

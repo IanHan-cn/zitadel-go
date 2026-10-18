@@ -23,11 +23,11 @@ func main() {
 
 	ctx := context.Background()
 
-	//create a client for the auth api providing:
-	//- issuer (e.g. https://acme-dtfhdg.zitadel.cloud)
-	//- api (e.g. acme-dtfhdg.zitadel.cloud:443)
-	//- scopes (including the ZITADEL project ID),
-	//- a JWT Profile source token (e.g. path to your key json), if not provided, the file will be read from the path set in env var ZITADEL_KEY_PATH
+	//为 auth api 创建一个客户端，需要提供：
+	//- issuer（例如 https://acme-dtfhdg.zitadel.cloud）
+	//- api（例如 acme-dtfhdg.zitadel.cloud:443）
+	//- scopes（需包含 ZITADEL 的项目 ID），
+	//- 一个 JWT Profile 令牌来源（例如你的 key json 路径），若未提供，则会从环境变量 ZITADEL_KEY_PATH 设置的路径读取该文件
 	client, err := auth.NewClient(
 		ctx,
 		*issuer,
@@ -45,8 +45,8 @@ func main() {
 		}
 	}()
 
-	//call ZITADEL and print the name and creation date of your service user
-	//the call was successful if no error occurred
+	//调用 ZITADEL，打印你的服务用户的名称与创建日期
+	//若未发生错误，则说明调用成功
 	resp, err := client.GetMyUser(ctx, &pb.GetMyUserRequest{})
 	if err != nil {
 		log.Fatalln("call failed: ", err)

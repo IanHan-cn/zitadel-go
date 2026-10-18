@@ -85,9 +85,9 @@ func TestUserInfoContext_IsAuthenticated(t *testing.T) {
 			want: false,
 		},
 		{
-			// The access token's expiry must not affect session validity: only the ID
-			// token's exp claim does. An expired access token is routinely refreshed
-			// in the background without invalidating the underlying identity assertion.
+			// 访问令牌的过期时间不应影响会话有效性：只有 ID 令牌的
+			// exp 声明才起作用。访问令牌过期后通常会在后台自动刷新，
+			// 而不会让底层的身份断言失效。
 			name: "access token expired but id token still valid",
 			ctx: &zitadeloidc.UserInfoContext[*oidc.IDTokenClaims, *oidc.UserInfo]{
 				UserInfo: &oidc.UserInfo{Subject: "user-1"},
@@ -111,10 +111,10 @@ func TestUserInfoContext_IsAuthenticated(t *testing.T) {
 	}
 }
 
-// TestUserInfoContext_IsAuthenticated_NilInterfaceClaims covers instantiating C as the
-// bare oidc.IDClaims interface rather than a concrete pointer type. In that case a zero
-// value IDTokenClaims is a nil interface, not a nil pointer, which reflect.ValueOf reports
-// as an invalid Value rather than a nil Ptr/Interface Value.
+// TestUserInfoContext_IsAuthenticated_NilInterfaceClaims 覆盖了将 C 实例化为
+// 裸的 oidc.IDClaims 接口（而非具体指针类型）的情况。此时零值的 IDTokenClaims
+// 是一个 nil 接口，而不是 nil 指针，reflect.ValueOf 会将其报告为无效的 Value，
+// 而非 nil 的 Ptr/Interface Value。
 func TestUserInfoContext_IsAuthenticated_NilInterfaceClaims(t *testing.T) {
 	ctx := &zitadeloidc.UserInfoContext[oidc.IDClaims, *oidc.UserInfo]{
 		UserInfo: &oidc.UserInfo{Subject: "user-1"},

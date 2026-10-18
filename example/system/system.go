@@ -19,10 +19,10 @@ func main() {
 
 	ctx := context.Background()
 
-	//create a client for the system api providing:
-	//- issuer (e.g. https://acme-dtfhdg.zitadel.cloud)
-	//- api (e.g. acme-dtfhdg.zitadel.cloud:443)
-	//- a JWT Profile source token (e.g. path to your key.pem) and the corresponding userID from the `SystemAPIUsers` config in ZITADEL
+	//为 system api 创建一个客户端，需要提供：
+	//- issuer（例如 https://acme-dtfhdg.zitadel.cloud）
+	//- api（例如 acme-dtfhdg.zitadel.cloud:443）
+	//- 一个 JWT Profile 令牌来源（例如你的 key.pem 路径），以及 ZITADEL 中 `SystemAPIUsers` 配置里对应的 userID
 	client, err := system.NewClient(
 		ctx,
 		*issuer,
@@ -39,14 +39,14 @@ func main() {
 		}
 	}()
 
-	//call ZITADEL and print the name and creation date of all instances
-	//the call was successful if no error occurred
-	//nolint:staticcheck // Example uses deprecated call for simplicity.
+	//调用 ZITADEL，打印所有实例的名称与创建日期
+	//若未发生错误，则说明调用成功
+	//nolint:staticcheck // 为简洁起见，示例中使用了已废弃的调用。
 	resp, err := client.ListInstances(ctx, &pb.ListInstancesRequest{})
 	if err != nil {
 		log.Fatalln("call failed: ", err)
 	}
-	//print all instances
+	//打印所有实例
 	for _, instance := range resp.GetResult() {
 		log.Printf("%s was created on %s", instance.Name, instance.Details.CreationDate.AsTime())
 	}

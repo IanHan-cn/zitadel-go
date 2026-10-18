@@ -7,14 +7,14 @@ const (
 	scopeZITADELProjectID = "zitadel"
 )
 
-// ScopeProjectID will add the requested projectID to the audience of the access and id token
-// deprecated: use [client.ScopeProjectID]
+// ScopeProjectID 会将指定的 projectID 添加到访问令牌和 ID 令牌的 audience 中
+// deprecated: 请改用 [client.ScopeProjectID]
 func ScopeProjectID(projectID string) string {
 	return fmt.Sprintf(scopeFormatProjectID, projectID)
 }
 
-// ScopeZitadelAPI adds the ProjectID of the ZITADEL Project
-// deprecated: use [client.ScopeZitadelAPI]
+// ScopeZitadelAPI 添加 ZITADEL 项目自身的 ProjectID
+// deprecated: 请改用 [client.ScopeZitadelAPI]
 func ScopeZitadelAPI() string {
 	return ScopeProjectID(scopeZITADELProjectID)
 }

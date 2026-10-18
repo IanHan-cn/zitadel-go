@@ -19,7 +19,7 @@ type signParams struct {
 	Algorithm  jwt.SigningMethod
 }
 
-// signTestJWT builds a signed token for unit tests only, with configurable options.
+// signTestJWT 仅供单元测试使用，用于构造一个可配置的已签名令牌。
 func signTestJWT(p signParams) (string, error) {
 	now := time.Now().UTC()
 
@@ -32,7 +32,7 @@ func signTestJWT(p signParams) (string, error) {
 		ExpiresAt: jwt.NewNumericDate(now.Add(p.TTL)),
 	}
 
-	// Default to RS256 if no algorithm is specified
+	// 若未指定算法，则默认使用 RS256
 	if p.Algorithm == nil {
 		p.Algorithm = jwt.SigningMethodRS256
 	}
@@ -40,7 +40,7 @@ func signTestJWT(p signParams) (string, error) {
 	tok := jwt.NewWithClaims(p.Algorithm, claims)
 	tok.Header["kid"] = p.KeyID
 
-	// Handle the "none" algorithm case, which is unsigned
+	// 处理 "none" 算法的情况，该算法不签名
 	if p.Algorithm == jwt.SigningMethodNone {
 		return tok.SigningString()
 	}

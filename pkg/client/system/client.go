@@ -40,8 +40,8 @@ func NewClient(ctx context.Context, issuer, api string, source JWTAuthentication
 
 type Option func() zitadel.Option
 
-// WithInsecure disables transport security for the client connection
-// use only when absolutely necessary (e.g. local development)
+// WithInsecure 关闭客户端连接的传输层安全；
+// 仅在确有必要时使用（例如本地开发）
 func WithInsecure() func() zitadel.Option {
 	return func() zitadel.Option {
 		return zitadel.WithInsecure()
@@ -50,8 +50,8 @@ func WithInsecure() func() zitadel.Option {
 
 type JWTAuthenticationSource func() middleware.JWTProfileTokenSource
 
-// JWTProfileFromPath reads the key at the provided path and creates a JWTAuthenticationSource (oauth2.TokensSource)
-// to authenticate against the SystemAPI
+// JWTProfileFromPath 读取给定路径下的密钥，并创建一个 JWTAuthenticationSource（oauth2.TokensSource），
+// 用于向 SystemAPI 进行认证
 func JWTProfileFromPath(keyPath, userID string) JWTAuthenticationSource {
 	return func() middleware.JWTProfileTokenSource {
 		return func(issuer string, _ []string) (oauth2.TokenSource, error) {
@@ -64,8 +64,8 @@ func JWTProfileFromPath(keyPath, userID string) JWTAuthenticationSource {
 	}
 }
 
-// JWTProfileFromKey creates a JWTAuthenticationSource (oauth2.TokensSource) from the provided key (and userID)
-// to authenticate against the SystemAPI
+// JWTProfileFromKey 基于提供的密钥（以及 userID）创建一个 JWTAuthenticationSource（oauth2.TokensSource），
+// 用于向 SystemAPI 进行认证
 func JWTProfileFromKey(key []byte, userID string) JWTAuthenticationSource {
 	return func() middleware.JWTProfileTokenSource {
 		return func(issuer string, _ []string) (oauth2.TokenSource, error) {

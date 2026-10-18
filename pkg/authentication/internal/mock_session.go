@@ -1,4 +1,4 @@
-// Package internal provides internal test utilities for the authentication package.
+// Package internal 为 authentication 包提供内部测试工具。
 package internal
 
 import (
@@ -7,30 +7,30 @@ import (
 	"github.com/zitadel/zitadel-go/v3/pkg/authentication"
 )
 
-// MockSessionStore is a mock implementation of a session store for testing purposes.
-// It stores sessions in memory and tracks whether Set and Get methods were called.
+// MockSessionStore 是用于测试的会话存储 mock 实现。
+// 它将会话保存在内存中，并记录 Set 和 Get 方法是否被调用过。
 type MockSessionStore[T authentication.Ctx] struct {
 	SetCalled bool
 	GetCalled bool
 	Store     map[string]T
 }
 
-// NewMockSessionStore creates a new MockSessionStore with an initialized storage map.
+// NewMockSessionStore 创建一个存储映射已初始化的 MockSessionStore。
 func NewMockSessionStore[T authentication.Ctx]() *MockSessionStore[T] {
 	return &MockSessionStore[T]{
 		Store: make(map[string]T),
 	}
 }
 
-// Set stores a session with the given ID and marks SetCalled as true.
+// Set 按给定的 ID 保存会话，并将 SetCalled 标记为 true。
 func (m *MockSessionStore[T]) Set(id string, session T) error {
 	m.SetCalled = true
 	m.Store[id] = session
 	return nil
 }
 
-// Get retrieves a session by ID and marks GetCalled as true.
-// Returns an error if the session ID is not found.
+// Get 按 ID 取出会话，并将 GetCalled 标记为 true。
+// 若未找到对应的会话 ID，则返回错误。
 func (m *MockSessionStore[T]) Get(id string) (T, error) {
 	m.GetCalled = true
 	s, ok := m.Store[id]

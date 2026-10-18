@@ -6,8 +6,8 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/crypto"
 )
 
-// State represents the state of the users application before an authentication process starts,
-// It is used to transfer the state from the application to the Login UI and back, e.g. when starting the login flow.
+// State 表示认证流程开始前用户应用的状态，
+// 用于在应用与登录界面之间来回传递状态，例如发起登录流程时。
 type State struct {
 	RequestedURI string
 }

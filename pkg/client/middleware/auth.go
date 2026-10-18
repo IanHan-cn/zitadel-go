@@ -54,9 +54,9 @@ func JWTProfileFromKeyAndUserID(ctx context.Context, key []byte, keyID, userID s
 	}
 }
 
-// NewGenericAuthenticator creates an interceptor from any provided oauth2.TokenSource.
-// This is the most flexible constructor, allowing for use cases like Client
-// Credentials, Personal Access Tokens, or other custom token sources.
+// NewGenericAuthenticator 基于任意提供的 oauth2.TokenSource 创建一个拦截器。
+// 这是最灵活的构造函数，可支持客户端凭证、个人访问令牌
+// 或其他自定义令牌来源等使用场景。
 func NewGenericAuthenticator(ts oauth2.TokenSource) (*AuthInterceptor, error) {
 	if ts == nil {
 		return nil, errors.New("token source cannot be nil")
@@ -66,9 +66,10 @@ func NewGenericAuthenticator(ts oauth2.TokenSource) (*AuthInterceptor, error) {
 	}, nil
 }
 
-// NewAuthenticator creates an interceptor which authenticates a service account with a provided JWT Profile (using a key.json either as file or data).
-// There returned token will be used for authorization in all calls
-// if expired, the token will be automatically refreshed
+// NewAuthenticator 创建一个拦截器，使用提供的 JWT Profile 对服务账号进行认证
+// （key.json 可以以文件或数据的形式提供）。
+// 返回的令牌将用于所有调用的授权；
+// 若令牌过期，会自动刷新。
 func NewAuthenticator(issuer string, jwtProfileTokenSource JWTProfileTokenSource, scopes ...string) (*AuthInterceptor, error) {
 	ts, err := jwtProfileTokenSource(issuer, scopes)
 	if err != nil {

@@ -13,9 +13,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// startMockGRPCServer sets up a minimal, non-functional gRPC server that
-// successfully accepts connections. This allows us to test the NewConnection
-// function's logic without it failing on `grpc.Dial`.
+// startMockGRPCServer 搭建一个极简的、不具备实际功能的 gRPC 服务器，
+// 但能成功接受连接。这样我们就能测试 NewConnection 函数的逻辑，
+// 而不会让它在 `grpc.Dial` 处失败。
 func startMockGRPCServer(t *testing.T) string {
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "mock server failed to listen")
@@ -31,8 +31,8 @@ func startMockGRPCServer(t *testing.T) string {
 	return lis.Addr().String()
 }
 
-// TestWithCustomURL verifies that the WithCustomURL option correctly overrides
-// the default issuer and api endpoint values in the Connection struct.
+// TestWithCustomURL 验证 WithCustomURL 选项能否正确覆盖
+// Connection 结构体中默认的 issuer 和 api 端点值。
 func TestWithCustomURL(t *testing.T) {
 	api := startMockGRPCServer(t)
 	customIssuer := "https://my-custom-issuer.com"
@@ -48,8 +48,8 @@ func TestWithCustomURL(t *testing.T) {
 	assert.Equal(t, customAPI, conn.api)
 }
 
-// TestWithTokenSource verifies that the WithTokenSource option correctly sets
-// a generic oauth2.TokenSource on the Connection struct.
+// TestWithTokenSource 验证 WithTokenSource 选项能否在 Connection 结构体上
+// 正确设置一个通用的 oauth2.TokenSource。
 func TestWithTokenSource(t *testing.T) {
 	api := startMockGRPCServer(t)
 	mockTokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "test-token"})
@@ -62,8 +62,7 @@ func TestWithTokenSource(t *testing.T) {
 	assert.Equal(t, mockTokenSource, conn.tokenSource)
 }
 
-// TestWithInsecure verifies that the WithInsecure option correctly sets the
-// internal insecure flag to true.
+// TestWithInsecure 验证 WithInsecure 选项能否正确将内部的 insecure 标志设为 true。
 func TestWithInsecure(t *testing.T) {
 	api := startMockGRPCServer(t)
 
@@ -76,8 +75,8 @@ func TestWithInsecure(t *testing.T) {
 	assert.True(t, conn.insecure)
 }
 
-// TestWithInsecureSkipVerifyTLS verifies that the WithInsecureSkipVerifyTLS option
-// correctly sets the flag on the connection.
+// TestWithInsecureSkipVerifyTLS 验证 WithInsecureSkipVerifyTLS 选项
+// 能否在连接上正确设置该标志。
 func TestWithInsecureSkipVerifyTLS(t *testing.T) {
 	api := startMockGRPCServer(t)
 
@@ -90,7 +89,7 @@ func TestWithInsecureSkipVerifyTLS(t *testing.T) {
 	assert.True(t, conn.insecureSkipVerify)
 }
 
-// TestWithTransportHeader verifies that transport headers are stored on the connection.
+// TestWithTransportHeader 验证传输层请求头是否已保存在连接上。
 func TestWithTransportHeader(t *testing.T) {
 	api := startMockGRPCServer(t)
 
@@ -103,8 +102,8 @@ func TestWithTransportHeader(t *testing.T) {
 	assert.Equal(t, "value", conn.transportHeaders["x-test"])
 }
 
-// TestWithUnaryInterceptors verifies that the WithUnaryInterceptors option
-// correctly appends custom gRPC interceptors to the connection's list.
+// TestWithUnaryInterceptors 验证 WithUnaryInterceptors 选项能否
+// 将自定义 gRPC 拦截器正确追加到连接的拦截器列表中。
 func TestWithUnaryInterceptors(t *testing.T) {
 	api := startMockGRPCServer(t)
 	dummyInterceptor := func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
@@ -120,8 +119,8 @@ func TestWithUnaryInterceptors(t *testing.T) {
 	assert.Len(t, conn.unaryInterceptors, 3)
 }
 
-// TestWithStreamInterceptors verifies that the WithStreamInterceptors option
-// correctly appends custom gRPC interceptors to the connection's list.
+// TestWithStreamInterceptors 验证 WithStreamInterceptors 选项能否
+// 将自定义 gRPC 拦截器正确追加到连接的拦截器列表中。
 func TestWithStreamInterceptors(t *testing.T) {
 	api := startMockGRPCServer(t)
 	dummyInterceptor := func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
@@ -137,8 +136,8 @@ func TestWithStreamInterceptors(t *testing.T) {
 	assert.Len(t, conn.streamInterceptors, 3)
 }
 
-// TestWithDialOptions verifies that the WithDialOptions option correctly
-// appends custom gRPC dial options.
+// TestWithDialOptions 验证 WithDialOptions 选项能否
+// 正确追加自定义的 gRPC 拨号选项。
 func TestWithDialOptions(t *testing.T) {
 	api := startMockGRPCServer(t)
 	dummyDialOption := grpc.WithUserAgent("my-test-agent/1.0")

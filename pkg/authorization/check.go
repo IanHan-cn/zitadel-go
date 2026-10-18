@@ -23,10 +23,10 @@ var (
 	ErrMissingRole              = errors.New("missing required role")
 )
 
-// checkForEmptyorMalformedToken validates the following scenarios:
-// 1. Token header is empty
-// 2. Token header does not equal "Bearer "
-// 3. Token is empty after "Bearer " prefix
+// checkForEmptyorMalformedToken 校验以下几种情况：
+// 1. 令牌请求头为空
+// 2. 令牌请求头不以 "Bearer " 开头
+// 3. 去掉 "Bearer " 前缀后令牌为空
 func checkForEmptyorMalformedToken(tokenHeader string) error {
 	t := strings.TrimSpace(tokenHeader)
 	token, ok := strings.CutPrefix(t, oidc.BearerToken+" ")
@@ -36,27 +36,27 @@ func checkForEmptyorMalformedToken(tokenHeader string) error {
 	return nil
 }
 
-// AuthorizationChecker defines the interface for checking authorization.
-// This interface allows for mocking in tests.
+// AuthorizationChecker 定义了用于检查授权的接口。
+// 该接口便于在测试中通过 mock 替换实现。
 type AuthorizationChecker[T Ctx] interface {
 	CheckAuthorization(ctx context.Context, token string, options ...CheckOption) (authCtx T, err error)
 }
 
-// Authorizer provides the functionality to check for authorization such as token verification including role checks.
+// Authorizer 提供授权检查的能力，例如令牌校验以及角色检查。
 type Authorizer[T Ctx] struct {
 	verifier Verifier[T]
 	logger   *slog.Logger
 }
 
-// compile-time check that Authorizer implements AuthorizationChecker
+// 编译期检查，确保 Authorizer 实现了 AuthorizationChecker
 var _ AuthorizationChecker[Ctx] = (*Authorizer[Ctx])(nil)
 
-// Option allows customization of the [Authorizer] such as caching, logging and more.
+// Option 用于对 [Authorizer] 进行定制，例如缓存、日志等。
 type Option[T Ctx] func(authorizer *Authorizer[T])
 
-// WithLogger allows a logger other than slog.Default().
+// WithLogger 允许使用 slog.Default() 之外的日志记录器。
 //
-// EXPERIMENTAL: Will change to log/slog import after we drop support for Go 1.20
+// 实验性特性：在我们放弃对 Go 1.20 的支持后，将改为直接引入 log/slog
 func WithLogger[T Ctx](logger *slog.Logger) Option[T] {
 	return func(a *Authorizer[T]) {
 		a.logger = logger
@@ -78,7 +78,7 @@ func New[T Ctx](ctx context.Context, zitadel *zitadel.Zitadel, initVerifier Veri
 	return authorizer, nil
 }
 
-// CheckAuthorization will verify the token using the configured [Verifier] and provided [Check]
+// CheckAuthorization 会使用已配置的 [Verifier] 和提供的 [Check] 来校验令牌
 func (a *Authorizer[T]) CheckAuthorization(ctx context.Context, token string, options ...CheckOption) (authCtx T, err error) {
 	a.logger.Log(ctx, slog.LevelDebug, "checking authorization")
 	var t T
@@ -109,25 +109,25 @@ func (a *Authorizer[T]) CheckAuthorization(ctx context.Context, token string, op
 	return authCtx, nil
 }
 
-// Verifier defines the possible verification checks such as validation of the authorizationToken.
+// Verifier 定义了可用的校验方式，例如对 authorizationToken 的验证。
 type Verifier[T Ctx] interface {
 	CheckAuthorization(ctx context.Context, authorizationToken string) (T, error)
 }
 
-// VerifierInitializer abstracts the initialization of a [Verifier] by providing the ZITADEL domain, port and if tls is set
+// VerifierInitializer 抽象了 [Verifier] 的初始化过程，提供 ZITADEL 域名、端口以及是否启用 tls
 type VerifierInitializer[T Ctx] func(ctx context.Context, zitadel *zitadel.Zitadel) (Verifier[T], error)
 
-// Check will be executed during the authorization check and provide a mechanism to require additional permission such as a role.
-// There will be options, e.g. caching and more in the near future.
+// Check 会在授权检查过程中执行，提供一种要求额外权限（例如角色）的机制。
+// 不久的将来会增加更多选项，如缓存等。
 type Check[T Ctx] struct {
 	Checks []func(authCtx T) error
 }
 
-// CheckOption allows customization of the [Check] like additional permission requirements (e.g. roles)
+// CheckOption 用于对 [Check] 进行定制，例如额外的权限要求（如角色）
 type CheckOption func(*Check[Ctx])
 
-// WithRole requires the authorized user to be granted the provided role.
-// If the role is not granted to the user, an [ErrMissingRole] is returned.
+// WithRole 要求被授权的用户已被授予指定的角色。
+// 若用户未被授予该角色，则返回 [ErrMissingRole]。
 func WithRole(role string) CheckOption {
 	return func(checks *Check[Ctx]) {
 		checks.Checks = append(checks.Checks, func(authCtx Ctx) error {
@@ -139,8 +139,8 @@ func WithRole(role string) CheckOption {
 	}
 }
 
-// isServerError checks if an error indicates a 5xx server error from the introspection endpoint.
-// It looks for 5xx status codes in the error message or common server error indicators.
+// isServerError 检查某个错误是否表示来自 introspection 端点的 5xx 服务端错误。
+// 它会在错误信息中查找 5xx 状态码或常见的服务端错误标志。
 func isServerError(err error) bool {
 	if err == nil {
 		return false
@@ -148,10 +148,9 @@ func isServerError(err error) bool {
 
 	errorMsg := err.Error()
 
-	// Check for explicit 5xx status codes in the error message
-	// Note: When errors are wrapped with fmt.Errorf("%w", ...), the outer error's
-	// Error() method includes the wrapped error's message, so checking the outer
-	// error message is sufficient.
+	// 在错误信息中查找显式的 5xx 状态码
+	// 注意：当错误通过 fmt.Errorf("%w", ...) 包装时，外层错误的
+	// Error() 方法会包含被包装错误的信息，因此只需检查外层错误信息即可。
 	statusCodeRegex := regexp.MustCompile(`\b(5\d{2})\b`)
 	matches := statusCodeRegex.FindStringSubmatch(errorMsg)
 	if len(matches) > 1 {

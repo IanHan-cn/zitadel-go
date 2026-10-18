@@ -43,7 +43,7 @@ func main() {
 
 	log.Printf("Successfully called API: Your organization is %s", resp.GetOrg().GetName())
 
-	// Example: Get a valid token for custom API calls
+	// 示例：获取一个有效令牌，用于自定义 API 调用
 	token, err := api.GetValidToken()
 	if err != nil {
 		slog.Error("failed to get valid token", "error", err)

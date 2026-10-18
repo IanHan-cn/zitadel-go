@@ -18,9 +18,9 @@ import (
 var _ v3alpha.ExampleServiceServer = (*Server)(nil)
 
 var (
-	// This list allows to specify the authorization checks required to call the corresponding endpoint.
-	// If an endpoint (e.g. [v3alpha.ExampleService_Healthz_FullMethodName]) is not added to the list, it will be publicly accessible.
-	// By adding specific [authorization.CheckOption], additional requirements like role checks ([authorization.WithRole]) can be defined.
+	// 该列表用于指定调用各个端点所需的授权检查。
+	// 若某个端点（例如 [v3alpha.ExampleService_Healthz_FullMethodName]）未被加入列表，则它将被公开访问。
+	// 通过添加具体的 [authorization.CheckOption]，可以定义诸如角色检查（[authorization.WithRole]）之类的额外要求。
 	checks = map[string][]authorization.CheckOption{
 		v3alpha.ExampleService_ListTasks_FullMethodName: nil,
 		v3alpha.ExampleService_AddTask_FullMethodName:   {authorization.WithRole("admin")},
@@ -40,29 +40,29 @@ type Server struct {
 
 	mw *middleware.Interceptor[*oauth.IntrospectionContext]
 
-	// tasks are used to store an in-memory list used in the protected endpoint
+	// tasks 用于在内存中保存一个列表，供受保护的端点使用
 	tasks []string
 }
 
-// Healthz is accessible by anyone and will always return "OK" to indicate the API is running
+// Healthz 任何人都可以访问，它始终返回 "OK" 以表明 API 正在运行
 func (s *Server) Healthz(_ context.Context, _ *v3alpha.HealthzRequest) (*v3alpha.HealthzResponse, error) {
 	return &v3alpha.HealthzResponse{
 		Health: "OK",
 	}, nil
 }
 
-// ListTasks is only accessible with a valid authorization (in this case a valid access_token / PAT).
-// It will list all stored tasks. In case the user is granted the `admin` role it will add a separate task telling him
-// to add a new task.
+// ListTasks 仅在持有有效授权（本例中为有效的 access_token / PAT）时才可访问。
+// 它会列出所有已保存的任务。若用户被授予了 `admin` 角色，
+// 还会额外添加一条提示他去新建任务的任务项。
 func (s *Server) ListTasks(ctx context.Context, _ *v3alpha.ListTasksRequest) (*v3alpha.ListTasksResponse, error) {
-	// Using the [middleware.Context] function we can gather information about the authorized user.
-	// This example will just print the users ID using the provided method, and it will also
-	// print the username by directly access the field of the typed [*oauth.IntrospectionContext].
+	// 借助 [middleware.Context] 函数，我们可以获取已授权用户的信息。
+	// 本例仅通过提供的方法打印用户 ID，并通过直接访问
+	// 带类型的 [*oauth.IntrospectionContext] 的字段来打印用户名。
 	authCtx := s.mw.Context(ctx)
 	slog.Info("user accessed task list", "id", authCtx.UserID(), "username", authCtx.Username)
 
-	// Although this endpoint is accessible by any authorized user, you might want to take additional steps
-	// if the user is granted a specific role. In this case an `admin` will be informed to add a new task:
+	// 虽然任何已授权用户都可以访问该端点，但你可能会想在
+	// 用户被授予某个特定角色时采取额外操作。本例中会提示 `admin` 去新建任务：
 	taskList := s.tasks
 	if authCtx.IsGrantedRole("admin") {
 		taskList = append(taskList, "create a new task with `AddTask`")
@@ -73,48 +73,48 @@ func (s *Server) ListTasks(ctx context.Context, _ *v3alpha.ListTasksRequest) (*v
 	}, nil
 }
 
-// AddTask is only accessible with a valid authorization, which was granted the `admin` role (in any organization).
-// It will add the provided task to the list of existing ones.
+// AddTask 仅在持有有效授权且被授予 `admin` 角色（在任意组织内）时才可访问。
+// 它会将传入的任务添加到已有的任务列表中。
 func (s *Server) AddTask(ctx context.Context, req *v3alpha.AddTaskRequest) (*v3alpha.AddTaskResponse, error) {
-	// get the provided task and do not accept an empty value
+	// 获取传入的任务，不接受空值
 	if req.GetTask() == "" {
 		return nil, status.Error(codes.InvalidArgument, "task must not be empty")
 	}
 
-	// since it was not empty, let's add it to the existing list
+	// 既然不为空，就把它加入已有的列表
 	s.tasks = append(s.tasks, req.GetTask())
 
-	// since we only want the authorized userID and don't need any specific data, we can simply use [authorization.UserID]
+	// 由于我们只需要已授权用户的 userID，不需要其他特定数据，因此可以直接使用 [authorization.UserID]
 	slog.Info("admin added task", "id", authorization.UserID(ctx), "task", req.GetTask())
 
-	// inform the admin about the successful addition
+	// 告知管理员已成功添加
 	return &v3alpha.AddTaskResponse{
 		Added: fmt.Sprintf("task `%s` added", req.GetTask()),
 	}, nil
 }
 
-// AddTasks is only accessible with a valid authorization, which was granted the `admin` role (in any organization).
-// It demonstrates that GRPC client Stream can be used the same way a standard RPC methods.
-// It will also add the provided task(s) to the list of existing ones.
+// AddTasks 仅在持有有效授权且被授予 `admin` 角色（在任意组织内）时才可访问。
+// 它演示了 gRPC 客户端流可以像标准 RPC 方法一样使用。
+// 同样会把传入的一个或多个任务添加到已有的任务列表中。
 func (s *Server) AddTasks(stream v3alpha.ExampleService_AddTasksServer) error {
 	var count uint32
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
-			// the client stream ended, so let's check the list
+			// 客户端流已结束，我们来检查一下列表
 			if count == 0 {
 				return status.Error(codes.InvalidArgument, "no task provided")
 			}
 
-			// return the amount of successfully added task to the client
+			// 将成功添加的任务数量返回给客户端
 			return stream.SendAndClose(&v3alpha.AddTasksResponse{Added: count})
 		}
 		if err != nil {
 			return err
 		}
 
-		// If there was no error, let's check if the task was not empty and then directly add it to the list.
-		// We'll also log it again and count up the amount.
+		// 若没有出错，就检查任务是否为空，然后直接将其加入列表。
+		// 我们还会再次记录日志，并对数量进行累加。
 		if req.GetTask() != "" {
 			s.tasks = append(s.tasks, req.GetTask())
 			slog.Info("admin added task", "id", authorization.UserID(stream.Context()), "task", req.GetTask())

@@ -18,24 +18,24 @@ import (
 )
 
 var (
-	// flags to be provided for running the example server
+	// 运行示例服务器时需要提供的命令行参数
 	domain = flag.String("domain", "", "your ZITADEL instance domain (in the form: <instance>.zitadel.cloud or <yourdomain>)")
 	key    = flag.String("key", "", "path to your key.json")
 	port   = flag.String("port", "8089", "port to run the server on (default is 8089)")
 
-	// tasks are used to store an in-memory list used in the protected endpoint
+	// tasks 用于在内存中保存一个列表，供受保护的端点使用
 	tasks []string
 )
 
 /*
- This example demonstrates how to secure an HTTP API with ZITADEL using the provided authorization (AuthZ) middleware.
+ 本示例演示如何使用提供的授权（AuthZ）中间件，借助 ZITADEL 来保护一个 HTTP API。
 
- It will serve the following 3 different endpoints:
- (These are meant to demonstrate the possibilities and do not follow REST best practices):
+ 它会对外提供以下 3 个不同的端点：
+ （这些端点旨在演示各种可能性，并未遵循 REST 最佳实践）：
 
- - /api/healthz (can be called by anyone)
- - /api/tasks (requires authorization)
- - /api/add-task (requires authorization with granted `admin` role)
+ - /api/healthz（任何人都可以调用）
+ - /api/tasks（需要授权）
+ - /api/add-task（需要授权且已授予 `admin` 角色）
 */
 
 func main() {
@@ -43,20 +43,20 @@ func main() {
 
 	ctx := context.Background()
 
-	// Initiate the authorization by providing a zitadel configuration and a verifier.
-	// This example will use OAuth2 Introspection for this, therefore you will also need to provide the downloaded api key.json
+	// 通过提供 zitadel 配置和校验器来初始化授权能力。
+	// 本例将使用 OAuth2 Introspection，因此你还需要提供已下载的 api key.json
 	authZ, err := authorization.New(ctx, zitadel.New(*domain), oauth.DefaultAuthorization(*key))
 	if err != nil {
 		slog.Error("zitadel sdk could not initialize", "error", err)
 		os.Exit(1)
 	}
 
-	// Initialize the HTTP middleware by providing the authorization
+	// 通过提供授权能力来初始化 HTTP 中间件
 	mw := middleware.New(authZ)
 
 	router := http.NewServeMux()
 
-	// This endpoint is accessible by anyone and will always return "200 OK" to indicate the API is running
+	// 该端点任何人都可以访问，它始终返回 "200 OK" 以表明 API 正在运行
 	router.Handle("/api/healthz", http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			err = jsonResponse(w, "OK", http.StatusOK)
@@ -65,36 +65,36 @@ func main() {
 			}
 		}))
 
-	// This endpoint is only accessible with a valid authorization (in this case a valid access_token / PAT).
-	// It will list all stored tasks. In case the user is granted the `admin` role it will add a separate task telling him
-	// to add a new task.
+	// 该端点仅在持有有效授权（本例中为有效的 access_token / PAT）时才可访问。
+	// 它会列出所有已保存的任务。若用户被授予了 `admin` 角色，
+	// 还会额外添加一条提示他去新建任务的任务项。
 	router.Handle("/api/tasks", mw.RequireAuthorization()(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			// Using the [middleware.Context] function we can gather information about the authorized user.
-			// This example will just print the users ID using the provided method, and it will also
-			// print the username by directly access the field of the typed [*oauth.IntrospectionContext].
+			// 借助 [middleware.Context] 函数，我们可以获取已授权用户的信息。
+			// 本例仅通过提供的方法打印用户 ID，并通过直接访问
+			// 带类型的 [*oauth.IntrospectionContext] 的字段来打印用户名。
 			authCtx := mw.Context(r.Context())
 			slog.Info("user accessed task list", "id", authCtx.UserID(), "username", authCtx.Username)
 
-			// Although this endpoint is accessible by any authorized user, you might want to take additional steps
-			// if the user is granted a specific role. In this case an `admin` will be informed to add a new task:
+			// 虽然任何已授权用户都可以访问该端点，但你可能会想在
+			// 用户被授予某个特定角色时采取额外操作。本例中会提示 `admin` 去新建任务：
 			list := tasks
 			if authCtx.IsGrantedRole("admin") {
 				list = append(list, "create a new task on /api/add-task")
 			}
 
-			// return the existing task list
+			// 返回已有的任务列表
 			err = jsonResponse(w, &taskList{Tasks: list}, http.StatusOK)
 			if err != nil {
 				slog.Error("error writing response", "error", err)
 			}
 		})))
 
-	// This endpoint is only accessible with a valid authorization, which was granted the `admin` role (in any organization).
-	// It will add the provided task to the list of existing ones.
+	// 该端点仅在持有有效授权且被授予 `admin` 角色（在任意组织内）时才可访问。
+	// 它会将传入的任务添加到已有的任务列表中。
 	router.Handle("/api/add-task", mw.RequireAuthorization(authorization.WithRole(`admin`))(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			// get the provided task and do not accept an empty value
+			// 获取传入的任务，不接受空值
 			task := strings.TrimSpace(r.FormValue("task"))
 			if task == "" {
 				err = jsonResponse(w, "task must not be empty", http.StatusBadRequest)
@@ -105,13 +105,13 @@ func main() {
 				return
 			}
 
-			// since it was not empty, let's add it to the existing list
+			// 既然不为空，就把它加入已有的列表
 			tasks = append(tasks, task)
 
-			// since we only want the authorized userID and don't need any specific data, we can simply use [authorization.UserID]
+			// 由于我们只需要已授权用户的 userID，不需要其他特定数据，因此可以直接使用 [authorization.UserID]
 			slog.Info("admin added task", "id", authorization.UserID(r.Context()), "task", task)
 
-			// inform the admin about the successful addition
+			// 告知管理员已成功添加
 			err = jsonResponse(w, fmt.Sprintf("task `%s` added", task), http.StatusOK)
 			if err != nil {
 				slog.Error("error writing task added response", "error", err)
@@ -119,7 +119,7 @@ func main() {
 			}
 		})))
 
-	// start the server on the specified port (default http://localhost:8089)
+	// 在指定端口上启动服务器（默认为 http://localhost:8089）
 	lis := fmt.Sprintf(":%s", *port)
 	slog.Info("server listening, press ctrl+c to stop", "addr", "http://localhost"+lis)
 	err = http.ListenAndServe(lis, router)
@@ -129,7 +129,7 @@ func main() {
 	}
 }
 
-// jsonResponse is a simple helper function to return a proper JSON response
+// jsonResponse 是一个简单的辅助函数，用于返回规范的 JSON 响应
 func jsonResponse(w http.ResponseWriter, resp any, status int) error {
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(status)

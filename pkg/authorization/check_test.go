@@ -351,7 +351,7 @@ func TestAuthorizer_CheckAuthorization_ServerError(t *testing.T) {
 
 			assert.Error(t, err, "expected an error")
 
-			// Check for ServiceUnavailableErr
+			// 检查是否为 ServiceUnavailableErr
 			var serviceUnavailableErr *ServiceUnavailableErr
 			if tt.wantServiceErr {
 				assert.ErrorAs(t, err, &serviceUnavailableErr, tt.description)
@@ -359,7 +359,7 @@ func TestAuthorizer_CheckAuthorization_ServerError(t *testing.T) {
 				assert.False(t, errors.As(err, &serviceUnavailableErr), "should NOT be ServiceUnavailableErr: "+tt.description)
 			}
 
-			// Check for UnauthorizedErr
+			// 检查是否为 UnauthorizedErr
 			var unauthorizedErr *UnauthorizedErr
 			if tt.wantUnauthErr {
 				assert.ErrorAs(t, err, &unauthorizedErr, tt.description)
@@ -371,7 +371,7 @@ func TestAuthorizer_CheckAuthorization_ServerError(t *testing.T) {
 }
 
 func TestAuthorizer_CheckAuthorization_ServerErrorWithWrappedError(t *testing.T) {
-	// Test that wrapped errors with 5xx status codes are detected
+	// 测试带有 5xx 状态码的包装错误能否被识别出来
 	baseErr := fmt.Errorf("http status not ok: 503 Service Unavailable")
 	wrappedErr := fmt.Errorf("token introspection failed: %w", baseErr)
 

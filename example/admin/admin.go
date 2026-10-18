@@ -24,11 +24,11 @@ func main() {
 
 	ctx := context.Background()
 
-	//create a client for the admin api providing:
-	//- issuer (e.g. https://acme-dtfhdg.zitadel.cloud)
-	//- api (e.g. acme-dtfhdg.zitadel.cloud:443)
-	//- scopes (including the ZITADEL project ID),
-	//- a JWT Profile source token (e.g. path to your key json), if not provided, the file will be read from the path set in env var ZITADEL_KEY_PATH
+	//为 admin api 创建一个客户端，需要提供：
+	//- issuer（例如 https://acme-dtfhdg.zitadel.cloud）
+	//- api（例如 acme-dtfhdg.zitadel.cloud:443）
+	//- scopes（需包含 ZITADEL 的项目 ID），
+	//- 一个 JWT Profile 令牌来源（例如你的 key json 路径），若未提供，则会从环境变量 ZITADEL_KEY_PATH 设置的路径读取该文件
 	client, err := admin.NewClient(
 		ctx,
 		*issuer,
@@ -46,9 +46,9 @@ func main() {
 		}
 	}()
 
-	//call ZITADEL and print the name and creation date of the requested organisation
-	//the call was successful if no error occurred
-	//nolint:staticcheck // Example uses deprecated call for simplicity.
+	//调用 ZITADEL，打印所请求组织的名称与创建日期
+	//若未发生错误，则说明调用成功
+	//nolint:staticcheck // 为简洁起见，示例中使用了已废弃的调用。
 	resp, err := client.GetOrgByID(ctx, &pb.GetOrgByIDRequest{
 		Id: *orgID,
 	})

@@ -10,32 +10,30 @@ import (
 	"github.com/zitadel/oidc/v3/pkg/oidc"
 )
 
-// TokenCache defines a minimal interface for caching introspection results.
-// Implementations must be safe for concurrent use. The TTL informs the cache
-// how long the entry should remain valid before eviction.
+// TokenCache 定义了用于缓存 introspection 结果的最小接口。
+// 实现必须是并发安全的。TTL 用于告知缓存该条目在被清除前应保持有效的时长。
 type TokenCache[T any] interface {
-	// Get returns the cached value for token, if present and not expired.
-	// If not present or expired, ok is false and the zero value is returned.
+	// Get 返回 token 对应的缓存值（若存在且未过期）。
+	// 若不存在或已过期，则 ok 为 false，并返回零值。
 	Get(token string) (v T, ok bool)
 
-	// Set stores value for token with the provided TTL. Implementations
-	// should ensure expiry after the TTL elapses.
+	// Set 按给定的 TTL 保存 token 对应的值。实现
+	// 应确保在 TTL 到期后该条目失效。
 	Set(token string, value T, ttl time.Duration)
 }
 
-// IntrospectionVerificationWithCache validates bearer tokens using the OAuth2
-// introspection endpoint and optionally caches the result to avoid repeated
-// network calls for identical tokens within a configured TTL. If cache is nil,
-// all calls hit the introspection endpoint.
+// IntrospectionVerificationWithCache 使用 OAuth2 introspection 端点校验 bearer 令牌，
+// 并可选地缓存结果，以避免在配置的 TTL 内对相同令牌重复发起网络调用。
+// 若 cache 为 nil，则所有调用都会直接访问 introspection 端点。
 type IntrospectionVerificationWithCache[T any] struct {
 	rs    rs.ResourceServer
 	cache TokenCache[T]
 	ttl   time.Duration
 }
 
-// NewIntrospectionVerificationWithCache constructs a verifier that uses the
-// provided ResourceServer for introspection and an optional cache for reusing
-// results for the specified TTL. If cache is nil, no caching occurs.
+// NewIntrospectionVerificationWithCache 构造一个校验器，它使用提供的
+// ResourceServer 进行 introspection，并可选地使用缓存以在指定的 TTL 内复用结果。
+// 若 cache 为 nil，则不进行任何缓存。
 func NewIntrospectionVerificationWithCache[T any](
 	rs rs.ResourceServer,
 	cache TokenCache[T],
@@ -48,10 +46,9 @@ func NewIntrospectionVerificationWithCache[T any](
 	}
 }
 
-// CheckAuthorization validates authorizationToken. The value must be prefixed
-// with "Bearer ". When a cache is configured, a cached result is returned if
-// available; otherwise the introspection endpoint is called and the response
-// is stored in the cache for the configured TTL.
+// CheckAuthorization 校验 authorizationToken，其值必须以 "Bearer " 开头。
+// 若配置了缓存且存在缓存结果，则直接返回该结果；
+// 否则会调用 introspection 端点，并将响应按配置的 TTL 存入缓存。
 func (v *IntrospectionVerificationWithCache[T]) CheckAuthorization(
 	ctx context.Context,
 	authorizationToken string,

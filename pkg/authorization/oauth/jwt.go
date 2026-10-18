@@ -23,21 +23,20 @@ var (
 	ErrInvalidAudience = errors.New("invalid audience")
 )
 
-// JWTVerification provides an [authorization.Verifier] implementation
-// by validating an Authorization header bearing a JWT locally.
+// JWTVerification 通过在本地校验携带 JWT 的 Authorization 请求头，
+// 提供了 [authorization.Verifier] 的实现。
 type JWTVerification struct {
 	verifier *op.AccessTokenVerifier
 	clientID string
 }
 
-// WithJWT creates the local JWT validation implementation of the
-// [authorization.Verifier] interface. It is the recommended high-performance
-// method for securing high-throughput APIs.
+// WithJWT 创建 [authorization.Verifier] 接口的本地 JWT 校验实现。
+// 这是保护高吞吐 API 时推荐的高性能方式。
 //
-// This initializer uses OIDC Discovery to dynamically find the JWKS URI and
-// creates an [rp.RemoteKeySet] which fetches and caches the keys in memory.
-// It accepts the clientID for audience validation and optional
-// [op.AccessTokenVerifierOpt] to allow for support of different signing algorithms.
+// 该初始化函数使用 OIDC Discovery 动态查找 JWKS URI，
+// 并创建一个 [rp.RemoteKeySet]，用于在内存中获取并缓存密钥。
+// 它接收用于 audience 校验的 clientID，以及可选的
+// [op.AccessTokenVerifierOpt]，以便支持不同的签名算法。
 func WithJWT(clientID string, httpClient *gohttp.Client, options ...op.AccessTokenVerifierOpt) authorization.VerifierInitializer[*IntrospectionContext] {
 	if httpClient == nil {
 		httpClient = gohttp.DefaultClient
@@ -60,13 +59,13 @@ func WithJWT(clientID string, httpClient *gohttp.Client, options ...op.AccessTok
 	}
 }
 
-// CheckAuthorization implements the [authorization.Verifier] interface. It
-// validates an access token from an "Authorization: Bearer <token>" header.
+// CheckAuthorization 实现了 [authorization.Verifier] 接口，
+// 用于校验 "Authorization: Bearer <token>" 请求头中的访问令牌。
 //
-// The validation is performed locally using the cached JWKS keys. It checks
-// the token's signature, expiry, and issuer. On success, it returns an
-// [*IntrospectionContext] populated with the claims from the validated JWT.
-// This provides a fast, offline alternative to token introspection.
+// 校验过程在本地使用已缓存的 JWKS 密钥完成，会检查令牌的
+// 签名、过期时间和签发者。校验成功时，它会返回一个
+// 由已校验 JWT 的声明填充而成的 [*IntrospectionContext]。
+// 这提供了一种快速、离线的令牌 introspection 替代方案。
 func (j *JWTVerification) CheckAuthorization(ctx context.Context, authorizationToken string) (*IntrospectionContext, error) {
 	accessToken, ok := strings.CutPrefix(authorizationToken, oidc.BearerToken)
 	if !ok {
@@ -104,12 +103,11 @@ func (j *JWTVerification) CheckAuthorization(ctx context.Context, authorizationT
 	return resp, nil
 }
 
-// DefaultJWTAuthorization provides a simple initializer for the recommended
-// high-performance JWT validation method. It is a convenient wrapper around
-// WithJWT.
+// DefaultJWTAuthorization 为推荐的高性能 JWT 校验方式
+// 提供了一个简洁的初始化函数，它是 WithJWT 的便捷封装。
 //
-// It takes the clientID of the protected resource server and optional
-// [op.AccessTokenVerifierOpt] to customize the validation behavior.
+// 它接收受保护资源服务器的 clientID，以及可选的
+// [op.AccessTokenVerifierOpt]，用于定制校验行为。
 func DefaultJWTAuthorization(clientID string, options ...op.AccessTokenVerifierOpt) authorization.VerifierInitializer[*IntrospectionContext] {
 	return WithJWT(clientID, nil, options...)
 }

@@ -19,21 +19,21 @@ import (
 )
 
 var (
-	// flags to be provided for running the example server
+	// 运行示例服务器时需要提供的命令行参数
 	domain = flag.String("domain", "", "your ZITADEL instance domain (in the form: <instance>.zitadel.cloud or <yourdomain>)")
 	key    = flag.String("key", "", "path to your api key.json")
 	port   = flag.String("port", "8089", "port to run the server on (default is 8089)")
 )
 
 /*
- This example demonstrates how to secure an HTTP API with ZITADEL using the provided authorization (AuthZ) middleware
- in combination with using the ZITADEL API as well.
+ 本示例演示如何使用提供的授权（AuthZ）中间件，
+ 结合 ZITADEL API 一起，借助 ZITADEL 来保护一个 HTTP API。
 
- It will serve the following 2 different endpoints:
- (These are meant to demonstrate the possibilities and do not follow REST best practices):
+ 它会对外提供以下 2 个不同的端点：
+ （这些端点旨在演示各种可能性，并未遵循 REST 最佳实践）：
 
- - /api/healthz (can be called by anyone)
- - /api/permissions (requires authorization)
+ - /api/healthz（任何人都可以调用）
+ - /api/permissions（需要授权）
 */
 
 func main() {
@@ -41,9 +41,9 @@ func main() {
 
 	ctx := context.Background()
 
-	// Initiate the zitadel sdk by providing its domain
-	// and as this example will focus on authorization (using OAuth2 Introspection),
-	// you will also need to initialize that with the downloaded api key.json
+	// 通过提供域名来初始化 zitadel sdk；
+	// 并且由于本例聚焦于授权（使用 OAuth2 Introspection），
+	// 你还需要用已下载的 api key.json 来完成初始化
 
 	conf := zitadel.New(*domain)
 	authZ, err := authorization.New(ctx, conf, oauth.DefaultAuthorization(*key))
@@ -51,10 +51,10 @@ func main() {
 		slog.Error("zitadel sdk could not initialize authorization", "error", err)
 		os.Exit(1)
 	}
-	// Initialize the HTTP middleware by providing the sdk
+	// 通过提供 sdk 来初始化 HTTP 中间件
 	mw := middleware.New(authZ)
 
-	// as we will also call the ZITADEL API, we need to initialize the client
+	// 由于我们还要调用 ZITADEL API，因此需要初始化客户端
 	c, err := client.New(ctx, conf)
 	if err != nil {
 		slog.Error("zitadel sdk could not initialize authorization", "error", err)
@@ -63,7 +63,7 @@ func main() {
 
 	router := http.NewServeMux()
 
-	// This endpoint is accessible by anyone and will always return "200 OK" to indicate the API is running
+	// 该端点任何人都可以访问，它始终返回 "200 OK" 以表明 API 正在运行
 	router.Handle("/api/healthz", http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			err = jsonResponse(w, "OK", http.StatusOK)
@@ -72,18 +72,18 @@ func main() {
 			}
 		}))
 
-	// This endpoint is only accessible with a valid authorization (in this case a valid access_token / PAT).
-	// It will call ZITADEL to additionally get all permissions granted to the user in ZITADEL and return that.
+	// 该端点仅在持有有效授权（本例中为有效的 access_token / PAT）时才可访问。
+	// 它会调用 ZITADEL，额外获取在 ZITADEL 中授予该用户的所有权限并返回。
 	router.Handle("/api/permissions", mw.RequireAuthorization()(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			// Using the [middleware.Context] function we can gather information about the authorized user.
-			// This example will just print the users ID using the provided method, and it will also
-			// print the username by directly access the field of the typed [*oauth.IntrospectionContext].
+			// 借助 [middleware.Context] 函数，我们可以获取已授权用户的信息。
+			// 本例仅通过提供的方法打印用户 ID，并通过直接访问
+			// 带类型的 [*oauth.IntrospectionContext] 的字段来打印用户名。
 			authCtx := mw.Context(r.Context())
 			slog.Info("user accessed permission check", "id", authCtx.UserID(), "username", authCtx.Username)
 
-			// we use the callers on token to retrieve the permission on the ZITADEL API
-			// this will only work if ZITADEL is contained in the tokens audience (e.g. a PAT will always do so)
+			// 我们使用调用方的令牌去 ZITADEL API 上查询权限；
+			// 这只有在 ZITADEL 包含于令牌的 audience 中时才有效（例如 PAT 总是满足这一条件）
 			resp, err := c.AuthService().ListMyZitadelPermissions(client.AuthorizedUserCtx(r.Context()), &auth.ListMyZitadelPermissionsRequest{})
 			if err != nil {
 				slog.Error("error listing zitadel permissions", "error", err)
@@ -96,7 +96,7 @@ func main() {
 			}
 		})))
 
-	// start the server on the specified port (default http://localhost:8089)
+	// 在指定端口上启动服务器（默认为 http://localhost:8089）
 	lis := fmt.Sprintf(":%s", *port)
 	slog.Info("server listening, press ctrl+c to stop", "addr", "http://localhost"+lis)
 	err = http.ListenAndServe(lis, router)
@@ -106,7 +106,7 @@ func main() {
 	}
 }
 
-// jsonResponse is a simple helper function to return a proper JSON response
+// jsonResponse 是一个简单的辅助函数，用于返回规范的 JSON 响应
 func jsonResponse(w http.ResponseWriter, resp any, status int) error {
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(status)

@@ -17,25 +17,27 @@ import (
 
 type TokenSourceInitializer func(ctx context.Context, issuer string) (oauth2.TokenSource, error)
 
-// AuthenticationJWTProfile allows using the OAuth2 JWT Profile Grant to get a token using a key.json of a service user provided by ZITADEL.
+// AuthenticationJWTProfile 允许使用 OAuth2 JWT Profile 授权模式，
+// 借助 ZITADEL 提供的服务用户 key.json 来获取令牌。
 func AuthenticationJWTProfile(file *KeyFile, scopes ...string) TokenSourceInitializer {
 	return func(ctx context.Context, issuer string) (oauth2.TokenSource, error) {
 		return profile.NewJWTProfileTokenSource(ctx, issuer, file.UserID, file.KeyID, file.Key, scopes)
 	}
 }
 
-// JWTAuthentication allows using the OAuth2 JWT Profile Grant to get a token using a key.json of a service user provided by ZITADEL.
-// Deprecated: Use [AuthenticationJWTProfile] instead, which uses the correct KeyFile type.
+// JWTAuthentication 允许使用 OAuth2 JWT Profile 授权模式，
+// 借助 ZITADEL 提供的服务用户 key.json 来获取令牌。
+// Deprecated: 请改用 [AuthenticationJWTProfile]，它使用了正确的 KeyFile 类型。
 //
-//nolint:staticcheck // Keep deprecated signature for backward compatibility.
+//nolint:staticcheck // 为向后兼容保留该废弃签名。
 func JWTAuthentication(file *client.KeyFile, scopes ...string) TokenSourceInitializer {
 	return func(ctx context.Context, issuer string) (oauth2.TokenSource, error) {
 		return profile.NewJWTProfileTokenSource(ctx, issuer, file.UserID, file.KeyID, []byte(file.Key), scopes)
 	}
 }
 
-// PasswordAuthentication allows using the OAuth2 Client Credentials Grant to get a token using username and password
-// of a service user provided by ZITADEL.
+// PasswordAuthentication 允许使用 OAuth2 客户端凭证授权模式，
+// 借助 ZITADEL 提供的服务用户名和密码来获取令牌。
 func PasswordAuthentication(username, password string, scopes ...string) TokenSourceInitializer {
 	return func(ctx context.Context, issuer string) (oauth2.TokenSource, error) {
 		discovery, err := client.Discover(ctx, issuer, http.DefaultClient)
@@ -52,7 +54,7 @@ func PasswordAuthentication(username, password string, scopes ...string) TokenSo
 	}
 }
 
-// PAT allows setting a service user personal access token to be used for authorization.
+// PAT 允许设置服务用户的个人访问令牌（PAT）用于授权。
 func PAT(pat string) TokenSourceInitializer {
 	return func(ctx context.Context, _ string) (oauth2.TokenSource, error) {
 		return oauth2.StaticTokenSource(&oauth2.Token{
@@ -62,8 +64,8 @@ func PAT(pat string) TokenSourceInitializer {
 	}
 }
 
-// DefaultServiceUserAuthentication is a short version of [JWTAuthentication]
-// with a key.json read from a provided path.
+// DefaultServiceUserAuthentication 是 [JWTAuthentication] 的简化版本，
+// 会从给定路径读取 key.json。
 func DefaultServiceUserAuthentication(path string, scopes ...string) TokenSourceInitializer {
 	c, err := ConfigFromKeyFile(path)
 	if err != nil {
@@ -74,8 +76,8 @@ func DefaultServiceUserAuthentication(path string, scopes ...string) TokenSource
 	return AuthenticationJWTProfile(c, scopes...)
 }
 
-// AuthorizedUserCtx will set the authorization token of the authorized context (user) to be used
-// for a subsequent call. If there is no authorized context, the method will simply return the passed context back.
+// AuthorizedUserCtx 会将已授权上下文（用户）中的授权令牌设置好，
+// 供后续调用使用。若不存在已授权上下文，该方法会直接原样返回传入的上下文。
 func AuthorizedUserCtx(ctx context.Context) context.Context {
 	authCtx := authorization.Context[authorization.Ctx](ctx)
 	if !authCtx.IsAuthorized() {
@@ -84,7 +86,7 @@ func AuthorizedUserCtx(ctx context.Context) context.Context {
 	return BearerTokenCtx(ctx, strings.TrimPrefix(authCtx.GetToken(), oidc.BearerToken))
 }
 
-// BearerTokenCtx will set the passed token to be used for a subsequent call.
+// BearerTokenCtx 会设置传入的令牌，供后续调用使用。
 func BearerTokenCtx(ctx context.Context, token string) context.Context {
 	return context.WithValue(ctx, ctxOverwrite, &oauth2.Token{
 		AccessToken: strings.Trim(token, " "),
@@ -97,19 +99,19 @@ const (
 	scopeZITADELProjectID = "zitadel"
 )
 
-// ScopeProjectID will add the requested projectID to the audience of the access and id token
+// ScopeProjectID 会将指定的 projectID 添加到访问令牌和 ID 令牌的 audience 中
 func ScopeProjectID(projectID string) string {
 	return fmt.Sprintf(scopeFormatProjectID, projectID)
 }
 
-// ScopeZitadelAPI adds the projectID of ZITADEL to the audience
+// ScopeZitadelAPI 将 ZITADEL 自身的 projectID 添加到 audience 中
 func ScopeZitadelAPI() string {
 	return ScopeProjectID(scopeZITADELProjectID)
 }
 
-// PreSignedJWT allows using a pre-signed JWT token for authorization.
-// This is useful when you already have a valid JWT token and don't want the client
-// to generate and sign a new one.
+// PreSignedJWT 允许使用一个预先签发的 JWT 令牌进行授权。
+// 当你已经持有一个有效的 JWT 令牌，且不希望客户端再生成并签名一个新令牌时，
+// 这个方式会很有用。
 func PreSignedJWT(token string) TokenSourceInitializer {
 	return func(ctx context.Context, _ string) (oauth2.TokenSource, error) {
 		return oauth2.StaticTokenSource(&oauth2.Token{

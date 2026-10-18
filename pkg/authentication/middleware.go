@@ -15,8 +15,8 @@ func Middleware[T Ctx](authenticator AuthenticationChecker[T]) *Interceptor[T] {
 	}
 }
 
-// RequireAuthentication will check if there is a valid session and provide it in the context.
-// If there is no session, it will automatically start a new authentication (by redirecting the user to the Login UI)
+// RequireAuthentication 会检查是否存在有效会话，并将其放入上下文中。
+// 若不存在会话，它会自动发起一次新的认证（将用户重定向到登录界面）
 func (i *Interceptor[T]) RequireAuthentication() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -31,8 +31,8 @@ func (i *Interceptor[T]) RequireAuthentication() func(next http.Handler) http.Ha
 	}
 }
 
-// CheckAuthentication will check if there is a valid session and provide it in the context.
-// Unlike [RequireAuthentication] it will not start a new authentication if there is none.
+// CheckAuthentication 会检查是否存在有效会话，并将其放入上下文中。
+// 与 [RequireAuthentication] 不同，当会话不存在时它不会发起新的认证。
 func (i *Interceptor[T]) CheckAuthentication() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

@@ -24,9 +24,9 @@ func New[T authorization.Ctx](authorizer authorization.AuthorizationChecker[T], 
 	}
 }
 
-// Unary creates a [grpc.UnaryServerInterceptor].
-// Ensure to configure the [Interceptor] with the required checks.
-// If no checks are provided the interceptor will allow public access to the API.
+// Unary 创建一个 [grpc.UnaryServerInterceptor]。
+// 请确保为 [Interceptor] 配置了所需的检查项。
+// 若未提供任何检查项，该拦截器将允许 API 被公开访问。
 func (i *Interceptor[T]) Unary() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		ctx, err = i.intercept(ctx, info.FullMethod)
@@ -37,9 +37,9 @@ func (i *Interceptor[T]) Unary() grpc.UnaryServerInterceptor {
 	}
 }
 
-// Stream creates a [grpc.StreamServerInterceptor].
-// Ensure to configure the [Interceptor] with the required checks.
-// If no checks are provided the interceptor will allow public access to the API.
+// Stream 创建一个 [grpc.StreamServerInterceptor]。
+// 请确保为 [Interceptor] 配置了所需的检查项。
+// 若未提供任何检查项，该拦截器将允许 API 被公开访问。
 func (i *Interceptor[T]) Stream() grpc.StreamServerInterceptor {
 	return func(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		ctx, err := i.intercept(stream.Context(), info.FullMethod)
@@ -50,7 +50,8 @@ func (i *Interceptor[T]) Stream() grpc.StreamServerInterceptor {
 	}
 }
 
-// Context wraps the [authorization.Context] function to directly return the typed [authorization.Ctx] of the [Interceptor].
+// Context 包装了 [authorization.Context] 函数，
+// 用于直接返回 [Interceptor] 中带有具体类型的 [authorization.Ctx]。
 func (i *Interceptor[T]) Context(ctx context.Context) T {
 	return authorization.Context[T](ctx)
 }
@@ -72,8 +73,8 @@ func (i *Interceptor[T]) intercept(ctx context.Context, method string) (context.
 	return ctx, nil
 }
 
-// serverStream is required to be able to intercept and annotate the [context.Context]
-// between the client call and the server.
+// serverStream 的存在是为了能够在客户端调用与服务端之间
+// 拦截并注入 [context.Context]。
 type serverStream struct {
 	grpc.ServerStream
 	ctx context.Context
