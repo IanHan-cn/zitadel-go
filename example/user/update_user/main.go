@@ -1,0 +1,154 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"log"
+
+	"github.com/zitadel/oidc/v3/pkg/oidc"
+	"google.golang.org/grpc"
+
+	userv2 "github.com/zitadel/zitadel-go/v3/pkg/client/user/v2"
+	"github.com/zitadel/zitadel-go/v3/pkg/client/zitadel"
+	pb "github.com/zitadel/zitadel-go/v3/pkg/client/zitadel/user/v2"
+)
+
+var (
+	issuer      = flag.String("issuer", "", "issuer of your ZITADEL instance (in the form: https://<instance>.zitadel.cloud or https://<yourdomain>)")
+	api         = flag.String("api", "", "gRPC endpoint of your ZITADEL instance (in the form: <instance>.zitadel.cloud:443 or <yourdomain>:443)")
+	userID      = flag.String("userID", "", "userID of the user to update (required)")
+	username    = flag.String("username", "", "新的用户名；留空表示不修改")
+	givenName   = flag.String("givenName", "", "新的名字；留空表示不修改")
+	familyName  = flag.String("familyName", "", "新的姓氏；留空表示不修改")
+	nickName    = flag.String("nickName", "", "新的昵称；留空表示不修改")
+	displayName = flag.String("displayName", "", "新的展示名称；留空表示不修改")
+)
+
+// userUpdater 只暴露本样例需要用到的方法，便于在单元测试中用 fake 替换真实客户端
+type userUpdater interface {
+	UpdateUser(ctx context.Context, in *pb.UpdateUserRequest, opts ...grpc.CallOption) (*pb.UpdateUserResponse, error)
+}
+
+// updateUserParams 汇总修改用户资料所需的全部入参
+type updateUserParams struct {
+	UserID      string
+	Username    string
+	GivenName   string
+	FamilyName  string
+	NickName    string
+	DisplayName string
+}
+
+// hasChanges 判断是否至少提供了一个待更新字段；UpdateUser 是部分更新接口，
+// 一个字段都没给的话本次调用没有意义
+func (p updateUserParams) hasChanges() bool {
+	return p.Username != "" ||
+		p.GivenName != "" ||
+		p.FamilyName != "" ||
+		p.NickName != "" ||
+		p.DisplayName != ""
+}
+
+// buildUpdateProfile 只把非空字段放入 Profile。
+// Profile 里的字段都是可选指针：设置为空字符串会清空用户已有资料，因此空串一律不设置。
+func buildUpdateProfile(p updateUserParams) *pb.UpdateUserRequest_Human_Profile {
+	profile := &pb.UpdateUserRequest_Human_Profile{}
+	if p.GivenName != "" {
+		profile.GivenName = &p.GivenName
+	}
+	if p.FamilyName != "" {
+		profile.FamilyName = &p.FamilyName
+	}
+	if p.NickName != "" {
+		profile.NickName = &p.NickName
+	}
+	if p.DisplayName != "" {
+		profile.DisplayName = &p.DisplayName
+	}
+	return profile
+}
+
+// buildUpdateUserRequest 把入参组装成 UpdateUser 请求
+func buildUpdateUserRequest(p updateUserParams) *pb.UpdateUserRequest {
+	req := &pb.UpdateUserRequest{
+		UserId: p.UserID,
+		UserType: &pb.UpdateUserRequest_Human_{
+			Human: &pb.UpdateUserRequest_Human{
+				Profile: buildUpdateProfile(p),
+			},
+		},
+	}
+	if p.Username != "" {
+		req.Username = &p.Username
+	}
+	return req
+}
+
+// updateUser 通过 User API v2 部分更新用户信息
+func updateUser(ctx context.Context, client userUpdater, p updateUserParams) (*pb.UpdateUserResponse, error) {
+	switch {
+	case p.UserID == "":
+		return nil, errors.New("缺少必填参数: userID")
+	case !p.hasChanges():
+		return nil, errors.New("没有需要更新的字段：请至少提供 username/givenName/familyName/nickName/displayName 中的一项")
+	}
+	resp, err := client.UpdateUser(ctx, buildUpdateUserRequest(p))
+	if err != nil {
+		return nil, fmt.Errorf("更新用户失败: %w", err)
+	}
+	return resp, nil
+}
+
+// 该示例演示如何通过 User API v2 修改普通用户的资料。
+// 运行示例：
+//
+//	ZITADEL_KEY_PATH=path/to/jwt-key.json go run example/user/update_user \
+//	  -issuer https://<instance>.zitadel.cloud \
+//	  -api <instance>.zitadel.cloud:443 \
+//	  -userID <userID> \
+//	  -givenName John \
+//	  -familyName Doe
+//
+// 私有化部署时 issuer 为实例外部 HTTPS 地址，api 为 gRPC 地址（主机名:端口，不带 https://）：
+//
+//	-issuer https://zitadel.corp.example.com -api zitadel.corp.example.com:443
+//
+// UpdateUser 是部分更新接口：未提供的字段保持原值不变。
+// 调用该 API 需要具备 user.write 权限。
+func main() {
+	flag.Parse()
+
+	ctx := context.Background()
+
+	// 为 User API v2 创建一个客户端（私有化部署时 api 请填写实例对外暴露 gRPC 的主机名:端口）
+	client, err := userv2.NewClient(
+		ctx,
+		*issuer,
+		*api,
+		[]string{oidc.ScopeOpenID, zitadel.ScopeZitadelAPI()},
+	)
+	if err != nil {
+		log.Fatalln("could not create client", err)
+	}
+	defer func() {
+		err := client.Connection.Close()
+		if err != nil {
+			log.Println("could not close grpc connection", err)
+		}
+	}()
+
+	resp, err := updateUser(ctx, client, updateUserParams{
+		UserID:      *userID,
+		Username:    *username,
+		GivenName:   *givenName,
+		FamilyName:  *familyName,
+		NickName:    *nickName,
+		DisplayName: *displayName,
+	})
+	if err != nil {
+		log.Fatalln("call failed: ", err)
+	}
+	log.Printf("user updated on: %s", resp.GetChangeDate().AsTime())
+}
