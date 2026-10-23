@@ -6,18 +6,18 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"google.golang.org/grpc"
 
-	userv2 "github.com/zitadel/zitadel-go/v3/pkg/client/user/v2"
-	"github.com/zitadel/zitadel-go/v3/pkg/client/zitadel"
+	"github.com/zitadel/zitadel-go/v3/pkg/client"
 	pb "github.com/zitadel/zitadel-go/v3/pkg/client/zitadel/user/v2"
+	"github.com/zitadel/zitadel-go/v3/pkg/zitadel"
 )
 
 var (
-	issuer      = flag.String("issuer", "", "issuer of your ZITADEL instance (in the form: https://<instance>.zitadel.cloud or https://<yourdomain>)")
-	api         = flag.String("api", "", "gRPC endpoint of your ZITADEL instance (in the form: <instance>.zitadel.cloud:443 or <yourdomain>:443)")
+	domain      = flag.String("domain", "", "your ZITADEL instance domain (in the form: <instance>.zitadel.cloud or <yourdomain>)")
+	keyPath     = flag.String("key", "", "path to your service user's key.json; 为空时回退到环境变量 ZITADEL_KEY_PATH")
 	userID      = flag.String("userID", "", "userID of the user to update (required)")
 	username    = flag.String("username", "", "新的用户名；留空表示不修改")
 	givenName   = flag.String("givenName", "", "新的名字；留空表示不修改")
@@ -25,11 +25,6 @@ var (
 	nickName    = flag.String("nickName", "", "新的昵称；留空表示不修改")
 	displayName = flag.String("displayName", "", "新的展示名称；留空表示不修改")
 )
-
-// userUpdater 只暴露本样例需要用到的方法，便于在单元测试中用 fake 替换真实客户端
-type userUpdater interface {
-	UpdateUser(ctx context.Context, in *pb.UpdateUserRequest, opts ...grpc.CallOption) (*pb.UpdateUserResponse, error)
-}
 
 // updateUserParams 汇总修改用户资料所需的全部入参
 type updateUserParams struct {
@@ -87,7 +82,7 @@ func buildUpdateUserRequest(p updateUserParams) *pb.UpdateUserRequest {
 }
 
 // updateUser 通过 User API v2 部分更新用户信息
-func updateUser(ctx context.Context, client userUpdater, p updateUserParams) (*pb.UpdateUserResponse, error) {
+func updateUser(ctx context.Context, client pb.UserServiceClient, p updateUserParams) (*pb.UpdateUserResponse, error) {
 	switch {
 	case p.UserID == "":
 		return nil, errors.New("缺少必填参数: userID")
@@ -101,19 +96,25 @@ func updateUser(ctx context.Context, client userUpdater, p updateUserParams) (*p
 	return resp, nil
 }
 
+// resolveKeyPath 读取服务用户密钥文件路径：-key 优先，未设置时回退到环境变量 ZITADEL_KEY_PATH
+func resolveKeyPath() string {
+	if *keyPath != "" {
+		return *keyPath
+	}
+	return os.Getenv("ZITADEL_KEY_PATH")
+}
+
 // 该示例演示如何通过 User API v2 修改普通用户的资料。
 // 运行示例：
 //
-//	ZITADEL_KEY_PATH=path/to/jwt-key.json go run example/user/update_user \
-//	  -issuer https://<instance>.zitadel.cloud \
-//	  -api <instance>.zitadel.cloud:443 \
+//	go run example/user/update_user \
+//	  -domain <instance>.zitadel.cloud \
+//	  -key path/to/jwt-key.json \
 //	  -userID <userID> \
 //	  -givenName John \
 //	  -familyName Doe
 //
-// 私有化部署时 issuer 为实例外部 HTTPS 地址，api 为 gRPC 地址（主机名:端口，不带 https://）：
-//
-//	-issuer https://zitadel.corp.example.com -api zitadel.corp.example.com:443
+// 密钥文件路径也可以通过环境变量 ZITADEL_KEY_PATH 提供（-key 优先级更高）。
 //
 // UpdateUser 是部分更新接口：未提供的字段保持原值不变。
 // 调用该 API 需要具备 user.write 权限。
@@ -122,24 +123,21 @@ func main() {
 
 	ctx := context.Background()
 
-	// 为 User API v2 创建一个客户端（私有化部署时 api 请填写实例对外暴露 gRPC 的主机名:端口）
-	client, err := userv2.NewClient(
-		ctx,
-		*issuer,
-		*api,
-		[]string{oidc.ScopeOpenID, zitadel.ScopeZitadelAPI()},
+	// 通过实例域名创建聚合客户端：认证（HTTP）与 API（gRPC）地址都由该域名派生。
+	// 认证使用服务用户的 key.json（JWT Profile），作用域需包含 ZITADEL 的项目 ID。
+	api, err := client.New(ctx, zitadel.New(*domain),
+		client.WithAuth(client.DefaultServiceUserAuthentication(resolveKeyPath(), oidc.ScopeOpenID, client.ScopeZitadelAPI())),
 	)
 	if err != nil {
 		log.Fatalln("could not create client", err)
 	}
 	defer func() {
-		err := client.Connection.Close()
-		if err != nil {
-			log.Println("could not close grpc connection", err)
+		if err := api.Close(); err != nil {
+			log.Println("could not close client", err)
 		}
 	}()
 
-	resp, err := updateUser(ctx, client, updateUserParams{
+	resp, err := updateUser(ctx, api.UserServiceV2(), updateUserParams{
 		UserID:      *userID,
 		Username:    *username,
 		GivenName:   *givenName,

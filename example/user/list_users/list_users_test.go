@@ -15,6 +15,8 @@ import (
 
 // fakeUserLister 替换真实的 UserServiceClient，记录收到的请求并返回预设结果
 type fakeUserLister struct {
+	// 内嵌生成的客户端接口：未实现的其它方法保持为 nil，本例只会调用 ListUsers
+	pb.UserServiceClient
 	request  *pb.ListUsersRequest
 	response *pb.ListUsersResponse
 	calls    int
@@ -28,6 +30,7 @@ func (f *fakeUserLister) ListUsers(_ context.Context, in *pb.ListUsersRequest, _
 
 // errUserLister 用于覆盖服务端返回错误的场景
 type errUserLister struct {
+	pb.UserServiceClient
 	request *pb.ListUsersRequest
 	err     error
 }

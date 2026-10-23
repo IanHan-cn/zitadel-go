@@ -6,33 +6,28 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"google.golang.org/grpc"
 
-	userv2 "github.com/zitadel/zitadel-go/v3/pkg/client/user/v2"
-	"github.com/zitadel/zitadel-go/v3/pkg/client/zitadel"
+	"github.com/zitadel/zitadel-go/v3/pkg/client"
 	pb "github.com/zitadel/zitadel-go/v3/pkg/client/zitadel/user/v2"
+	"github.com/zitadel/zitadel-go/v3/pkg/zitadel"
 )
 
 var (
-	issuer            = flag.String("issuer", "", "issuer of your ZITADEL instance (in the form: https://<instance>.zitadel.cloud or https://<yourdomain>)")
-	api               = flag.String("api", "", "gRPC endpoint of your ZITADEL instance (in the form: <instance>.zitadel.cloud:443 or <yourdomain>:443)")
+	domain            = flag.String("domain", "", "your ZITADEL instance domain (in the form: <instance>.zitadel.cloud or <yourdomain>)")
+	keyPath           = flag.String("key", "", "path to your service user's key.json; 为空时回退到环境变量 ZITADEL_KEY_PATH")
 	orgID             = flag.String("orgID", "", "orgID of the organization the user is created in (required)")
 	username          = flag.String("username", "", "username of the new user; defaults to the email if empty")
 	preferredLanguage = flag.String("preferredLanguage", "", "preferred language of the new user; defaults to en if empty")
 	givenName         = flag.String("givenName", "", "given (first) name of the new user")
 	familyName        = flag.String("familyName", "", "family (last) name of the new user")
 	email             = flag.String("email", "", "email of the new user (required)")
-	password          = flag.String("password", "", "initial password; if empty no password is set and the user is initialized by email")
+	password          = flag.String("password", "", "initial password; 建议改用环境变量 ZITADEL_USER_PASSWORD，避免明文出现在命令行中；都为空时不设置密码，用户通过初始化邮件自行设置")
 	changeRequired    = flag.Bool("changeRequired", true, "require the user to change the password on the first login")
 	verified          = flag.Bool("verified", false, "mark the email as verified; if false a verification email is sent")
 )
-
-// userCreator 只暴露本样例需要用到的方法，便于在单元测试中用 fake 替换真实客户端
-type userCreator interface {
-	CreateUser(ctx context.Context, in *pb.CreateUserRequest, opts ...grpc.CallOption) (*pb.CreateUserResponse, error)
-}
 
 // createUserParams 汇总创建普通用户所需的全部入参
 type createUserParams struct {
@@ -71,13 +66,18 @@ func buildCreateUserRequest(p createUserParams) *pb.CreateUserRequest {
 	}
 
 	// human 用户的信息由档案、邮箱和初始密码三部分组成
+	humanProfile := &pb.SetHumanProfile{
+		GivenName:  p.GivenName,
+		FamilyName: p.FamilyName,
+	}
+	// PreferredLanguage 是可选字段：留空时必须保持未设置，
+	// 否则服务端会收到显式的空语言，而不是使用默认语言
+	if p.PreferredLanguage != "" {
+		humanProfile.PreferredLanguage = &p.PreferredLanguage
+	}
 	humanUser := &pb.CreateUserRequest_Human{
-		Profile: &pb.SetHumanProfile{
-			GivenName:         p.GivenName,
-			FamilyName:        p.FamilyName,
-			PreferredLanguage: &p.PreferredLanguage,
-		},
-		Email: humanEmail,
+		Profile: humanProfile,
+		Email:   humanEmail,
 	}
 	// 未设置密码时，用户会通过收到的初始化邮件自行设置密码
 	if p.Password != "" {
@@ -104,7 +104,7 @@ func buildCreateUserRequest(p createUserParams) *pb.CreateUserRequest {
 }
 
 // createUser 通过 User API v2 创建普通用户
-func createUser(ctx context.Context, client userCreator, p createUserParams) (*pb.CreateUserResponse, error) {
+func createUser(ctx context.Context, client pb.UserServiceClient, p createUserParams) (*pb.CreateUserResponse, error) {
 	if err := p.validate(); err != nil {
 		return nil, err
 	}
@@ -115,22 +115,35 @@ func createUser(ctx context.Context, client userCreator, p createUserParams) (*p
 	return resp, nil
 }
 
+// resolveKeyPath 读取服务用户密钥文件路径：-key 优先，未设置时回退到环境变量 ZITADEL_KEY_PATH
+func resolveKeyPath() string {
+	if *keyPath != "" {
+		return *keyPath
+	}
+	return os.Getenv("ZITADEL_KEY_PATH")
+}
+
+// resolvePassword 读取初始密码：优先使用环境变量，避免密码明文出现在 ps 输出和 shell 历史中
+func resolvePassword() string {
+	if p := os.Getenv("ZITADEL_USER_PASSWORD"); p != "" {
+		return p
+	}
+	return *password
+}
+
 // 该示例演示如何通过 User API v2 创建一个普通用户（human user）。
 // 运行示例：
 //
-//	ZITADEL_KEY_PATH=path/to/jwt-key.json go run example/user/create_user \
-//	  -issuer https://<instance>.zitadel.cloud \
-//	  -api <instance>.zitadel.cloud:443 \
+//	ZITADEL_USER_PASSWORD='Secr3t-Passw0rd!' go run example/user/create_user \
+//	  -domain <instance>.zitadel.cloud \
+//	  -key path/to/jwt-key.json \
 //	  -orgID <orgID> \
 //	  -email john.doe@example.com \
 //	  -preferredLanguage zh \
 //	  -givenName John \
-//	  -familyName Doe \
-//	  -password "Secr3t-Passw0rd!"
+//	  -familyName Doe
 //
-// 私有化部署时 issuer 为实例外部 HTTPS 地址，api 为 gRPC 地址（主机名:端口，不带 https://）：
-//
-//	-issuer https://zitadel.corp.example.com -api zitadel.corp.example.com:443
+// 密钥文件路径也可以通过环境变量 ZITADEL_KEY_PATH 提供（-key 优先级更高）。
 //
 // 调用该 API 需要具备 user.write 权限。
 func main() {
@@ -138,37 +151,28 @@ func main() {
 
 	ctx := context.Background()
 
-	// 为 User API v2 创建一个客户端，需要提供：
-	// - issuer（例如 https://acme-dtfhdg.zitadel.cloud）
-	// - api（例如 acme-dtfhdg.zitadel.cloud:443）
-	// - scopes（需包含 ZITADEL 的项目 ID），
-	// - 一个 JWT Profile 令牌来源（例如你的 key json 路径），若未提供，则会从环境变量 ZITADEL_KEY_PATH 设置的路径读取该文件
-	client, err := userv2.NewClient(
-		ctx,
-		*issuer,
-		*api,
-		[]string{oidc.ScopeOpenID, zitadel.ScopeZitadelAPI()},
-		//zitadel.WithJWTProfileTokenSource(middleware.JWTProfileFromPath(ctx, "key.json")),
-		//zitadel.WithOrgID(*orgID),
+	// 通过实例域名创建聚合客户端：认证（HTTP）与 API（gRPC）地址都由该域名派生。
+	// 认证使用服务用户的 key.json（JWT Profile），作用域需包含 ZITADEL 的项目 ID。
+	api, err := client.New(ctx, zitadel.New(*domain),
+		client.WithAuth(client.DefaultServiceUserAuthentication(resolveKeyPath(), oidc.ScopeOpenID, client.ScopeZitadelAPI())),
 	)
 	if err != nil {
 		log.Fatalln("could not create client", err)
 	}
 	defer func() {
-		err := client.Connection.Close()
-		if err != nil {
-			log.Println("could not close grpc connection", err)
+		if err := api.Close(); err != nil {
+			log.Println("could not close client", err)
 		}
 	}()
 
-	resp, err := createUser(ctx, client, createUserParams{
+	resp, err := createUser(ctx, api.UserServiceV2(), createUserParams{
 		OrgID:             *orgID,
 		Username:          *username,
 		PreferredLanguage: *preferredLanguage,
 		GivenName:         *givenName,
 		FamilyName:        *familyName,
 		Email:             *email,
-		Password:          *password,
+		Password:          resolvePassword(),
 		ChangeRequired:    *changeRequired,
 		Verified:          *verified,
 	})

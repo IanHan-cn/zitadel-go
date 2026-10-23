@@ -20,6 +20,8 @@ func strPtr(s string) *string {
 
 // fakeUserUpdater 替换真实的 UserServiceClient，记录收到的请求并返回预设结果
 type fakeUserUpdater struct {
+	// 内嵌生成的客户端接口：未实现的其它方法保持为 nil，本例只会调用 UpdateUser
+	pb.UserServiceClient
 	request  *pb.UpdateUserRequest
 	response *pb.UpdateUserResponse
 	err      error

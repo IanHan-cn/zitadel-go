@@ -21,6 +21,9 @@ func strPtr(s string) *string {
 // fakeUserCreator 替换真实的 UserServiceClient，记录收到的请求并返回预设结果，
 // 这样单元测试无需连接任何 ZITADEL 实例
 type fakeUserCreator struct {
+	// 内嵌生成的客户端接口：未实现的其它方法保持为 nil，
+	// 这样无需为几十个 RPC 各写一个空实现，本例只会调用 CreateUser
+	pb.UserServiceClient
 	request  *pb.CreateUserRequest
 	response *pb.CreateUserResponse
 	err      error
@@ -103,13 +106,49 @@ func TestBuildCreateUserRequest_Table(t *testing.T) {
 			},
 		},
 		{
-			// 不传 username / password 时，这两个字段不应出现在请求里，
-			// 否则服务端会以错误的零值处理（用户名默认为邮箱、由初始化邮件设置密码）
+			// 不传 username / password / preferredLanguage 时，这些字段不应出现在请求里，
+			// 否则服务端会以错误的零值处理（用户名默认为邮箱、由初始化邮件设置密码、语言使用默认值）
 			name: "2_NoUsernameAndNoPassword_LeavesFieldsUnset",
 			params: createUserParams{
 				OrgID:    "org-1",
 				Email:    "john@example.com",
 				Verified: false,
+			},
+			expect: &pb.CreateUserRequest{
+				OrganizationId: "org-1",
+				UserType: &pb.CreateUserRequest_Human_{
+					Human: &pb.CreateUserRequest_Human{
+						Profile: &pb.SetHumanProfile{},
+						Email:   &pb.SetHumanEmail{Email: "john@example.com"},
+					},
+				},
+			},
+		},
+		{
+			// 显式传入语言时必须写入该字段，否则用户会被创建为未指定语言
+			name: "3_PreferredLanguageProvided_IsSet",
+			params: createUserParams{
+				OrgID:             "org-1",
+				Email:             "john@example.com",
+				PreferredLanguage: "zh",
+			},
+			expect: &pb.CreateUserRequest{
+				OrganizationId: "org-1",
+				UserType: &pb.CreateUserRequest_Human_{
+					Human: &pb.CreateUserRequest_Human{
+						Profile: &pb.SetHumanProfile{PreferredLanguage: strPtr("zh")},
+						Email:   &pb.SetHumanEmail{Email: "john@example.com"},
+					},
+				},
+			},
+		},
+		{
+			// 未设置密码时，ChangeRequired 不应生成任何 PasswordType
+			name: "4_ChangeRequiredWithoutPassword_LeavesPasswordUnset",
+			params: createUserParams{
+				OrgID:          "org-1",
+				Email:          "john@example.com",
+				ChangeRequired: true,
 			},
 			expect: &pb.CreateUserRequest{
 				OrganizationId: "org-1",
@@ -132,6 +171,23 @@ func TestBuildCreateUserRequest_Table(t *testing.T) {
 	}
 }
 
+func TestResolvePassword_PrefersEnvOverFlag(t *testing.T) {
+	// 环境变量优先，避免密码明文出现在命令行里
+	t.Setenv("ZITADEL_USER_PASSWORD", "from-env")
+	*password = "from-flag"
+	t.Cleanup(func() { *password = "" })
+
+	assert.Equal(t, "from-env", resolvePassword())
+}
+
+func TestResolvePassword_FallsBackToFlag(t *testing.T) {
+	t.Setenv("ZITADEL_USER_PASSWORD", "")
+	*password = "from-flag"
+	t.Cleanup(func() { *password = "" })
+
+	assert.Equal(t, "from-flag", resolvePassword())
+}
+
 func TestCreateUser_Success(t *testing.T) {
 	fake := &fakeUserCreator{response: &pb.CreateUserResponse{Id: "user-1"}}
 
@@ -145,6 +201,7 @@ func TestCreateUser_Success(t *testing.T) {
 	assert.Equal(t, "user-1", resp.GetId())
 	assert.Equal(t, 1, fake.calls)
 	assert.Equal(t, "org-1", fake.request.GetOrganizationId())
+	assert.Equal(t, "john@example.com", fake.request.GetHuman().GetEmail().GetEmail())
 	// 必须选择 Human 分支，才能创建普通用户而不是机器用户
 	assert.NotNil(t, fake.request.GetHuman())
 	assert.Nil(t, fake.request.GetMachine())

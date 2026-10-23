@@ -16,6 +16,8 @@ import (
 // fakeUserDeleter 替换真实的 UserServiceClient：
 // 分别统计预览（GetUserByID）与删除（DeleteUser）的调用情况
 type fakeUserDeleter struct {
+	// 内嵌生成的客户端接口：未实现的其它方法保持为 nil，本例只会调用 GetUserByID / DeleteUser
+	pb.UserServiceClient
 	getResponse   *pb.GetUserByIDResponse
 	getRequest    *pb.GetUserByIDRequest
 	getErr        error

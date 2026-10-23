@@ -5,30 +5,25 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/zitadel/oidc/v3/pkg/oidc"
-	"google.golang.org/grpc"
 
-	userv2 "github.com/zitadel/zitadel-go/v3/pkg/client/user/v2"
-	"github.com/zitadel/zitadel-go/v3/pkg/client/zitadel"
+	"github.com/zitadel/zitadel-go/v3/pkg/client"
 	object "github.com/zitadel/zitadel-go/v3/pkg/client/zitadel/object/v2"
 	pb "github.com/zitadel/zitadel-go/v3/pkg/client/zitadel/user/v2"
+	"github.com/zitadel/zitadel-go/v3/pkg/zitadel"
 )
 
 var (
-	issuer   = flag.String("issuer", "", "issuer of your ZITADEL instance (in the form: https://<instance>.zitadel.cloud or https://<yourdomain>)")
-	api      = flag.String("api", "", "gRPC endpoint of your ZITADEL instance (in the form: <instance>.zitadel.cloud:443 or <yourdomain>:443)")
+	domain   = flag.String("domain", "", "your ZITADEL instance domain (in the form: <instance>.zitadel.cloud or <yourdomain>)")
+	keyPath  = flag.String("key", "", "path to your service user's key.json; 为空时回退到环境变量 ZITADEL_KEY_PATH")
 	orgID    = flag.String("orgID", "", "只返回该组织下的用户；为空则返回调用者有权限查看的全部用户")
 	username = flag.String("username", "", "按用户名过滤（忽略大小写精确匹配）")
 	email    = flag.String("email", "", "按邮箱过滤（忽略大小写精确匹配）")
 	limit    = flag.Uint("limit", 100, "单页返回的最大条数")
 	offset   = flag.Uint64("offset", 0, "分页偏移量")
 )
-
-// userLister 只暴露本样例需要用到的方法，便于在单元测试中用 fake 替换真实客户端
-type userLister interface {
-	ListUsers(ctx context.Context, in *pb.ListUsersRequest, opts ...grpc.CallOption) (*pb.ListUsersResponse, error)
-}
 
 // listUsersParams 汇总查询用户列表所需的全部入参
 type listUsersParams struct {
@@ -82,7 +77,7 @@ func buildListUsersRequest(p listUsersParams) *pb.ListUsersRequest {
 }
 
 // listUsers 通过 User API v2 查询用户列表
-func listUsers(ctx context.Context, client userLister, p listUsersParams) (*pb.ListUsersResponse, error) {
+func listUsers(ctx context.Context, client pb.UserServiceClient, p listUsersParams) (*pb.ListUsersResponse, error) {
 	resp, err := client.ListUsers(ctx, buildListUsersRequest(p))
 	if err != nil {
 		return nil, fmt.Errorf("查询用户列表失败: %w", err)
@@ -90,18 +85,24 @@ func listUsers(ctx context.Context, client userLister, p listUsersParams) (*pb.L
 	return resp, nil
 }
 
+// resolveKeyPath 读取服务用户密钥文件路径：-key 优先，未设置时回退到环境变量 ZITADEL_KEY_PATH
+func resolveKeyPath() string {
+	if *keyPath != "" {
+		return *keyPath
+	}
+	return os.Getenv("ZITADEL_KEY_PATH")
+}
+
 // 该示例演示如何通过 User API v2 查询（全部）用户列表。
 // 运行示例：
 //
-//	ZITADEL_KEY_PATH=path/to/jwt-key.json go run example/user/list_users \
-//	  -issuer https://<instance>.zitadel.cloud \
-//	  -api <instance>.zitadel.cloud:443 \
+//	go run example/user/list_users \
+//	  -domain <instance>.zitadel.cloud \
+//	  -key path/to/jwt-key.json \
 //	  -orgID <orgID> \
 //	  -limit 100
 //
-// 私有化部署时 issuer 为实例外部 HTTPS 地址，api 为 gRPC 地址（主机名:端口，不带 https://）：
-//
-//	-issuer https://zitadel.corp.example.com -api zitadel.corp.example.com:443
+// 密钥文件路径也可以通过环境变量 ZITADEL_KEY_PATH 提供（-key 优先级更高）。
 //
 // 需要注意：不传 -orgID 时会返回调用者有权限查看的全部用户；
 // 实例用户较多时请配合 -limit/-offset 分页使用。
@@ -110,24 +111,21 @@ func main() {
 
 	ctx := context.Background()
 
-	// 为 User API v2 创建一个客户端（私有化部署时 api 请填写实例对外暴露 gRPC 的主机名:端口）
-	client, err := userv2.NewClient(
-		ctx,
-		*issuer,
-		*api,
-		[]string{oidc.ScopeOpenID, zitadel.ScopeZitadelAPI()},
+	// 通过实例域名创建聚合客户端：认证（HTTP）与 API（gRPC）地址都由该域名派生。
+	// 认证使用服务用户的 key.json（JWT Profile），作用域需包含 ZITADEL 的项目 ID。
+	api, err := client.New(ctx, zitadel.New(*domain),
+		client.WithAuth(client.DefaultServiceUserAuthentication(resolveKeyPath(), oidc.ScopeOpenID, client.ScopeZitadelAPI())),
 	)
 	if err != nil {
 		log.Fatalln("could not create client", err)
 	}
 	defer func() {
-		err := client.Connection.Close()
-		if err != nil {
-			log.Println("could not close grpc connection", err)
+		if err := api.Close(); err != nil {
+			log.Println("could not close client", err)
 		}
 	}()
 
-	resp, err := listUsers(ctx, client, listUsersParams{
+	resp, err := listUsers(ctx, api.UserServiceV2(), listUsersParams{
 		OrgID:    *orgID,
 		Username: *username,
 		Email:    *email,
